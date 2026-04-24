@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ذاكرة العناكب: نيون</title>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    
+    <style>
+        :root {
+            --neon-green: #00ff88;
+            --neon-purple: #bc13fe;
+            --danger: #ff0055;
+            --bg-dark: #020204;
+            --card-bg: rgba(10, 10, 15, 0.9);
+            --font-main: 'Orbitron', 'Segoe UI', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: white;
+            font-family: var(--font-main);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden; /* لمنع التمرير وتخريب تجربة اللعبة */
+            touch-action: none; /* تحسين استجابة اللمس */
+        }
+
+        /* شاشة التحميل والدخول الفاخرة */
+        #main-menu {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle at center, #10101a 0%, #000 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            transition: opacity 0.5s;
+        }
+
+        #game-logo {
+            font-size: 40px;
+            text-transform: uppercase;
+            color: var(--neon-green);
+            text-shadow: 0 0 10px var(--neon-green), 0 0 20px var(--neon-green);
+            margin-bottom: 50px;
+            letter-spacing: 2px;
+        }
+
+        .btn {
+            padding: 16px 30px;
+            border-radius: 5px;
+            border: 2px solid transparent;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 16px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-family: var(--font-main);
+            width: 80%;
+            max-width: 300px;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .btn-google {
+            background: white;
+            color: #333;
+            box-shadow: 0 4px 15px rgba(255,255,255,0.2);
+        }
+
+        .btn-create {
+            background: transparent;
+            border-color: var(--neon-purple);
+            color: var(--neon-purple);
+            box-shadow: 0 0 15px rgba(188, 19, 254, 0.3);
+        }
+
+        .btn-create:hover {
+            background: var(--neon-purple);
+            color: white;
+            box-shadow: 0 0 30px var(--neon-purple);
+        }
+
+        .btn-join {
+            background: var(--neon-green);
+            color: black;
+            box-shadow: 0 0 15px rgba(0, 255, 136, 0.3);
+        }
+
+        #menu-actions input {
+            padding: 15px;
+            border-radius: 5px;
+            border: 1px solid #333;
+            background: #0a0a0a;
+            color: white;
+            text-align: center;
+            font-size: 18px;
+            font-family: var(--font-main);
+            width: 80%;
+            max-width: 300px;
+            margin-bottom: 15px;
+            outline: none;
+        }
+
+        /* حاوية اللعبة الرئيسية */
+        #game-container {
+            display: none;
+            width: 100%;
+            height: 100vh;
+            position: relative;
+        }
+
+        /* الـ Canvas حيث يتم رسم كل شيء */
+        #game-canvas {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* شريط الحالة والتحكم (HUD) */
+        #hud {
+            position: absolute;
+            top: 0; left: 0; width: 100%;
+            padding: 15px;
+            box-sizing: border-box;
+            display: flex;
+            justify-content: space-between;
+            pointer-events: none; /* عشان ما يغطيش على اللمس في الكانفاس */
+            z-index: 10;
+        }
+
+        .hud-box {
+            background: var(--card-bg);
+            padding: 10px 15px;
+            border-radius: 5px;
+            border: 1px solid rgba(255,255,255,0.1);
+            backdrop-filter: blur(5px);
+            font-size: 14px;
+        }
+
+        #turn-announcer-hud {
+            position: absolute;
+            top: 70px; left: 50%;
+            transform: translateX(-50%);
+            background: var(--neon-purple);
+            color: white;
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            box-shadow: 0 0 15px var(--neon-purple);
+            white-space: nowrap;
+        }
+
+        /* أزرار الأكشن السفلية */
+        #action-bar {
+            position: absolute;
+            bottom: 20px; left: 50%;
+            transform: translateX(-50%);
+            display: none;
+            gap: 15px;
+            width: 90%;
+            max-width: 400px;
+            z-index: 10;
+        }
+
+        /* المودال الفاخر */
+        .modal {
+            position: fixed;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%) scale(0.9);
+            background: var(--card-bg);
+            padding: 30px;
+            border-radius: 10px;
+            border: 1px solid var(--neon-green);
+            z-index: 1000;
+            text-align: center;
+            display: none;
+            width: 80%;
+            max-width: 350px;
+            box-shadow: 0 0 50px rgba(0,0,0,0.8);
+            backdrop-filter: blur(10px);
+            opacity: 0;
+            transition: all 0.3s;
+        }
+
+        .modal.open {
+            display: block;
+            opacity: 1;
+            transform: translate(-50%, -50%) scale(1);
+        }
+
+        .modal h2 { color: var(--neon-green); margin-top: 0; font-size: 22px; }
+        .modal p { font-size: 16px; line-height: 1.5; opacity: 0.9; }
+
+        /* ستايل لجروب اختيار عدد اللاعبين */
+        .player-count-select {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin: 15px 0;
+            width: 80%; max-width: 300px;
+        }
+        .count-opt {
+            flex: 1;
+            background: #111;
+            padding: 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            border: 1px solid #333;
+            transition: 0.3s;
+            font-weight: bold;
+        }
+        .count-opt.active {
+            border-color: var(--neon-green);
+            background: rgba(0, 255, 136, 0.1);
+            color: var(--neon-green);
+            box-shadow: 0 0 10px rgba(0, 255, 136, 0.2);
+        }
+
+        /* جلب خط Orbitron من جوجل */
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap');
+    </style>
+</head>
+<body>
+
+    <div id="main-menu">
+        <div id="game-logo">Spider Memory</div>
+        
+        <button class="btn btn-google" id="login-btn" onclick="login()">Sign in with Google</button>
+        
+        <div id="menu-actions" style="display: none; flex-direction: column; align-items: center; width: 100%;">
+            <p style="font-size: 14px; opacity: 0.7; margin-bottom: 5px;">إعداد غرفة جديدة:</p>
+            <div class="player-count-select">
+                <div class="count-opt active" onclick="setCount(2)">2</div>
+                <div class="count-opt" onclick="setCount(3)">3</div>
+                <div class="count-opt" onclick="setCount(4)">4</div>
+            </div>
+            <button class="btn btn-create" onclick="createRoom()">Create Room</button>
+            
+            <div style="width: 80%; max-width: 300px; height: 1px; background: #222; margin: 15px 0;"></div>
+            
+            <input type="text" id="room-input" placeholder="Room Code (e.g., 1234)" maxlength="4">
+            <button class="btn btn-join" onclick="joinRoom()">Join Room</button>
+        </div>
+    </div>
+
+    <div id="game-container">
+        <canvas id="game-canvas"></canvas>
+        
+        <div id="hud">
+            <div class="hud-box" id="player-hearts-hud">❤️❤️❤️</div>
+            <div class="hud-box" id="room-display-hud">#----</div>
+        </div>
+        <div id="turn-announcer-hud">جاري التحميل...</div>
+
+        <div id="action-bar">
+            <button class="btn btn-join" style="flex:1; margin:0;" onclick="startCupSelection()">اسحب كوب</button>
+            <button class="btn btn-create" style="flex:1; margin:0;" onclick="drawCard()">اسحب كرت</button>
+        </div>
+    </div>
+
+    <div id="game-modal" class="modal">
+        <h2 id="modal-title"></h2>
+        <p id="modal-body"></p>
+        <button class="btn btn-join" style="width:auto; margin-top:15px;" onclick="closeModal()">موافق</button>
+    </div>
+
+    <script>
+        // === إعدادات FIREBASE ===
+        // استبدل هذه البيانات ببيانات مشروعك من Firebase Console
+        const firebaseConfig = {
+            apiKey: "AIzaSyDh0y_wU6wTUMJgmKHpLC4jPemXgoQqhKM",
+            authDomain: "spitar-game.firebaseapp.com",
+            databaseURL: "https://spitar-game-default-rtdb.firebaseio.com/",
+            projectId: "spitar-game",
+            storageBucket: "spitar-game.firebasestorage.app",
+            messagingSenderId: "790164742624",
+            appId: "1:790164742624:web:762eef5608ba298e6f0b85"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.database();
+        const provider = new firebase.auth.GoogleAuthProvider();
+
+        // === متغيرات اللعبة الأساسية ===
+        let user = null, roomCode = null, selectedCount = 2, gameState = null;
+        let isMyTurn = false;
+        let interactionMode = 'NONE'; // NONE, SETUP_SPIDERS, SELECT_CUP
+
+        // === إعدادات الـ CANVAS والرسم ===
+        const canvas = document.getElementById('game-canvas');
+        const ctx = canvas.getContext('2d');
+        let cupsRects = []; // لتخزين إحداثيات الكؤوس للكشف عن اللمس
+
+        // تأثيرات بصرية
+        let particles = [];
+        let pulses = [];
+
+        // ألوان النيون
+        const COLORS = {
+            green: '#00ff88',
+            purple: '#bc13fe',
+            danger: '#ff0055',
+            bg: '#050506',
+            cup_off: '#1a1a22',
+            cup_on: '#0a0a0f'
+        };
+
+        // دالة لضبط حجم الكانفاس ليتناسب مع الشاشة بدقة
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            if (gameState) renderGameCanvas();
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+
+        // === نظام التحريك (Animation Loop) ===
+        function animationLoop() {
+            if (gameState && document.getElementById('game-container').style.display === 'block') {
+                renderGameCanvas();
+                updateAndRenderParticles();
+                updateAndRenderPulses();
+            }
+            requestAnimationFrame(animationLoop);
+        }
+        requestAnimationFrame(animationLoop);
+
+
+        // === تسجيل الدخول وإنشاء الغرف (Logic) ===
+        async function login() {
+            try {
+                const res = await auth.signInWithPopup(provider);
+                user = res.user;
+                document.getElementById('login-btn').style.display = 'none';
+                document.getElementById('menu-actions').style.display = 'flex';
+            } catch (error) { console.error(error); }
+        }
+
+        function setCount(n) {
+            selectedCount = n;
+            document.querySelectorAll('.count-opt').forEach(el => el.classList.remove('active'));
+            event.currentTarget.classList.add('active');
+        }
+
+        async function createRoom() {
+            roomCode = Math.floor(1000 + Math.random() * 9000);
+            await db.ref('rooms/' + roomCode).set({
+                maxPlayers: selectedCount,
+                status: 'WAITING',
+                turnIndex: 0,
+                cups: Array(30).fill({ revealed: false, type: 'empty' }),
+                createdAt: firebase.database.ServerValue.TIMESTAMP
+            });
+            joinRoom(roomCode);
+        }
+
+        async function joinRoom(code) {
+            roomCode = code || document.getElementById('room-input').value;
+            if (!roomCode || roomCode.length < 4) return alert("أدخل كود الغرفة المكون من 4 أرقام");
+
+            const snap = await db.ref('rooms/' + roomCode).once('value');
+            if(!snap.val()) return alert("الغرفة غير موجودة!");
+
+            await db.ref(`rooms/${roomCode}/players/${user.uid}`).update({
+                name: user.displayName, hearts: 3, spiders: [], ready: false, photo: user.photoURL
+            });
+            startSync();
+        }
+
+        function startSync() {
+            document.getElementById('main-menu').style.opacity = '0';
+            setTimeout(() => {
+                document.getElementById('main-menu').style.display = 'none';
+                document.getElementById('game-container').style.display = 'block';
+                document.getElementById('room-display-hud').innerText = "#" + roomCode;
+                resizeCanvas();
+            }, 500);
+
+            db.ref('rooms/' + roomCode).on('value', snap => {
+                gameState = snap.val();
+                if(gameState) handleGameStateUpdate();
+            });
+        }
+
+
+        // === معالجة تحديثات الحالة ورسم الواجهة ===
+        function handleGameStateUpdate() {
+            const me = gameState.players[user.uid];
+            document.getElementById('player-hearts-hud').innerText = "❤️".repeat(me.hearts);
+
+            // تحديد وضع التفاعل والدور
+            const pIds = Object.keys(gameState.players);
+            const currentTurnId = pIds[gameState.turnIndex];
+            isMyTurn = (currentTurnId === user.uid && gameState.status === 'PLAYING');
+
+            if (!me.ready) {
+                interactionMode = 'SETUP_SPIDERS';
+                document.getElementById('turn-announcer-hud').innerText = `ضع 3 عناكب! (${me.spiders?.length || 0}/3)`;
+                document.getElementById('action-bar').style.display = 'none';
+            } else if (gameState.status === 'WAITING') {
+                interactionMode = 'NONE';
+                document.getElementById('turn-announcer-hud').innerText = "انتظار بقية اللاعبين...";
+                document.getElementById('action-bar').style.display = 'none';
+            } else if (gameState.status === 'PLAYING') {
+                interactionMode = 'NONE'; // الافتراضي، يتغير عند الضغط على "اسحب كوب"
+                document.getElementById('turn-announcer-hud').innerText = isMyTurn ? "دورك! احذر من عناكبك!" : `دور: ${gameState.players[currentTurnId].name}`;
+                document.getElementById('action-bar').style.display = isMyTurn ? 'flex' : 'none';
+                
+                // تنبيه بسيط عند بداية الدور
+                if (isMyTurn && !pulses.length) createPulse(canvas.width/2, canvas.height/2, COLORS.purple);
+            } else if (gameState.status === 'FINISHED') {
+                 // كود شاشة النهاية (يمكن إضافته لاحقاً)
+                 interactionMode = 'NONE';
+                 document.getElementById('turn-announcer-hud').innerText = "انتهت اللعبة!";
+            }
+        }
+
+        // --- دالة الرسم الرئيسية للكانفاس ---
+        function renderGameCanvas() {
+            // 1. مسح الخلفية برادينت مظلم
+            const grad = ctx.createRadialGradient(canvas.width/2, canvas.height/2, 0, canvas.width/2, canvas.height/2, canvas.width);
+            grad.addColorStop(0, '#0a0a12'); grad.addColorStop(1, '#000');
+            ctx.fillStyle = grad; ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            if (!gameState) return;
+
+            // 2. حساب إعدادات الشبكة (Grid) الـ 30 كوب (5x6)
+            const cols = 5; const rows = 6;
+            const gap = 10;
+            const topPadding = 120; const bottomPadding = 100;
+            
+            const availableW = canvas.width - (gap * (cols + 1));
+            const availableH = canvas.height - topPadding - bottomPadding - (gap * (rows + 1));
+            
+            const cupW = availableW / cols;
+            const cupH = availableH / rows;
+            const size = Math.min(cupW, cupH); // الحفاظ على التناسب
+
+            const startX = (canvas.width - (size * cols + gap * (cols - 1))) / 2;
+            const startY = topPadding;
+
+            cupsRects = []; // إعادة تعيين إحداثيات اللمس
+            const me = gameState.players[user.uid];
+
+            // 3. رسم الكؤوس
+            for (let i = 0; i < 30; i++) {
+                const r = Math.floor(i / cols); const c = i % cols;
+                const x = startX + c * (size + gap);
+                const y = startY + r * (size + gap);
+                
+                // تخزين الإحداثيات للكشف عن اللمس لاحقاً
+                cupsRects.push({ x, y, w: size, h: size });
+
+                const cupData = gameState.cups[i];
+                drawNeonCup(x, y, size, cupData, me, i);
+            }
+        }
+
+        // --- دالة رسم كوب نيوني واحد ---
+        function drawNeonCup(x, y, size, data, me, index) {
+            ctx.save();
+            
+            // ستايل الكوب الأساسي (Off)
+            ctx.fillStyle = COLORS.cup_off;
+            ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+            ctx.lineWidth = 1;
+
+            let glowColor = null;
+            let icon = '?';
+
+            // حالة وضع العناكب: إظهار عناكب اللاعب الخاصة
+            if (interactionMode === 'SETUP_SPIDERS' && me.spiders?.includes(index)) {
+                glowColor = COLORS.purple; icon = '🕷️';
+            }
+
+            // حالة اللعب: الكوب مكشوف
+            if (data.revealed) {
+                if (data.type === 'spider') { glowColor = COLORS.danger; icon = '🕷️'; }
+                else { glowColor = COLORS.green; icon = '💨'; }
+                ctx.fillStyle = COLORS.cup_on;
+            }
+
+            // رسم تأثير التوهج الخلفي (Backglow)
+            if (glowColor) {
+                ctx.shadowColor = glowColor; ctx.shadowBlur = 15;
+                ctx.strokeStyle = glowColor; ctx.lineWidth = 2;
+            }
+
+            // رسم جسم الكوب (مربع بحواف مستديرة)
+            drawRoundedRect(ctx, x, y, size, size, 8);
+            ctx.fill(); ctx.stroke();
+            ctx.shadowBlur = 0; // إيقاف التوهج لبقية العناصر
+
+            // رسم الأيقونة أو النص بالداخل
+            ctx.fillStyle = glowColor ? glowColor : 'rgba(255,255,255,0.3)';
+            ctx.font = `bold ${size/2}px var(--font-main)`;
+            ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            
+            // إضافة توهج للنص أيضاً إذا كان نشطاً
+            if (glowColor) { ctx.shadowColor = glowColor; ctx.shadowBlur = 10; }
+            ctx.fillText(icon, x + size/2, y + size/2 + 2);
+            
+            ctx.restore();
+        }
+
+
+        // === التعامل مع اللمس والتفاعل على الـ Canvas ===
+        canvas.addEventListener('click', handleCanvasClick);
+        canvas.addEventListener('touchstart', (e) => {
+            // تحويل الـ Touch لـ Click إحداثي واحد
+            const touch = e.touches[0];
+            handleCanvasClick({ clientX: touch.clientX, clientY: touch.clientY });
+            // e.preventDefault(); // منع التمرير
+        });
+
+        function handleCanvasClick(e) {
+            // حساب الإحداثيات دقيقة بالنسبة للكانفاس
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+
+            // التحقق من اصطدام اللمس بأي كوب
+            for (let i = 0; i < cupsRects.length; i++) {
+                const cup = cupsRects[i];
+                if (mouseX >= cup.x && mouseX <= cup.x + cup.w &&
+                    mouseY >= cup.y && mouseY <= cup.y + cup.h) {
+                    handleCupClick(i, cup.x + cup.w/2, cup.y + cup.h/2);
+                    break; // وجدنا الكوب، لا داعي لتكملة الدورة
+                }
+            }
+        }
+
+        async function handleCupClick(index, centerX, centerY) {
+            // 1. وضع التجهيز: وضع العناكب
+            if (interactionMode === 'SETUP_SPIDERS') {
+                let s = gameState.players[user.uid].spiders || [];
+                if(s.includes(index) || s.length >= 3) return;
+                
+                s.push(index);
+                // تأثير بصري عند الوضع
+                createPulse(centerX, centerY, COLORS.purple);
+                
+                await db.ref(`rooms/${roomCode}/players/${user.uid}/spiders`).set(s);
+                
+                if(s.length === 3) {
+                    await db.ref(`rooms/${roomCode}/players/${user.uid}/ready`).set(true);
+                    checkGameStartCondition();
+                }
+            } 
+            // 2. وضع اللعب: كشف كوب
+            else if (interactionMode === 'SELECT_CUP') {
+                if (!isMyTurn || gameState.cups[index].revealed) return;
+                revealCupLogic(index, centerX, centerY);
+                interactionMode = 'NONE'; // العودة للوضع الطبيعي بعد الاختيار
+            }
+        }
+
+
+        // === منطق اللعبة المتقدم والتأثيرات ===
+
+        function startCupSelection() {
+            if (!isMyTurn) return;
+            interactionMode = 'SELECT_CUP';
+            document.getElementById('turn-announcer-hud').innerText = "اختر كوباً الآن على الشاشة!";
+            createPulse(canvas.width/2, canvas.height/2, COLORS.green);
+        }
+
+        async function revealCupLogic(i, centerX, centerY) {
+            let isSpider = false;
+            Object.values(gameState.players).forEach(p => { if(p.spiders?.includes(i)) isSpider = true; });
+
+            let updates = {};
+            updates[`cups/${i}`] = { revealed: true, type: isSpider ? 'spider' : 'empty' };
+            
+            // تأثير بصري وقرار القلوب
+            if (isSpider) {
+                updates[`players/${user.uid}/hearts`] = gameState.players[user.uid].hearts - 1;
+                createExplosion(centerX, centerY, COLORS.danger); // انفجار أحمر
+            } else {
+                createPulse(centerX, centerY, COLORS.green); // نبضة خضراء
+            }
+
+            // نقل الدور
+            updates['turnIndex'] = (gameState.turnIndex + 1) % Object.keys(gameState.players).length;
+            
+            await db.ref(`rooms/${roomCode}`).update(updates);
+            if(isSpider) showModal("عنكبوت!", "لقد لمست عنكبوت وفقدت قلباً! الذاكرة خانتك.");
+        }
+
+        async function drawCard() {
+            if (!isMyTurn) return;
+            const cards = ['REVEAL_3', 'PARDON', 'TRAP'];
+            const card = cards[Math.floor(Math.random() * cards.length)];
+            let updates = {};
+            let nextTurn = (gameState.turnIndex + 1) % Object.keys(gameState.players).length;
+
+            createPulse(canvas.width/2, canvas.height/2, COLORS.purple); // تأثير سحب الكرت
+
+            if(card === 'REVEAL_3') {
+                showModal("كرت الكاشف", "السحر النيوني يكشف لك 3 أكواب فارغة!");
+                let revealedCount = 0;
+                // كشف 3 عشوائية لا تحتوي على عناكب
+                let availableIndexes = Array.from({length: 30}, (_, i) => i).sort(() => 0.5 - Math.random());
+                for(let i of availableIndexes) {
+                    if(revealedCount >= 3) break;
+                    let hasSpider = Object.values(gameState.players).some(p => p.spiders?.includes(i));
+                    if(!hasSpider && !gameState.cups[i].revealed) {
+                        updates[`cups/${i}`] = { revealed: true, type: 'empty' };
+                        revealedCount++;
+                    }
+                }
+            } else if(card === 'PARDON') {
+                showModal("كرت العفو", "لقد حصلت على دور إضافي، استغله جيداً!");
+                nextTurn = gameState.turnIndex; // لا نغير turnIndex
+            } else {
+                showModal("فخ نيون!", "الكرت كان فخاً إلكترونياً! فقدت قلباً.");
+                updates[`players/${user.uid}/hearts`] = gameState.players[user.uid].hearts - 1;
+                createPulse(canvas.width/2, canvas.height/2, COLORS.danger);
+            }
+
+            updates['turnIndex'] = nextTurn;
+            await db.ref(`rooms/${roomCode}`).update(updates);
+        }
+
+        async function checkGameStartCondition() {
+            const players = gameState.players;
+            if(Object.keys(players).length == gameState.maxPlayers && Object.values(players).every(p => p.ready)) {
+                db.ref(`rooms/${roomCode}/status`).set('PLAYING');
+            }
+        }
+
+
+        // === جرافيكس مساعدة وتأثيرات (VFX) ===
+
+        function drawRoundedRect(ctx, x, y, width, height, radius) {
+            ctx.beginPath(); ctx.moveTo(x + radius, y);
+            ctx.lineTo(x + width - radius, y); ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+            ctx.lineTo(x + width, y + height - radius); ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+            ctx.lineTo(x + radius, y + height); ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+            ctx.lineTo(x, y + radius); ctx.quadraticCurveTo(x, y, x + radius, y); ctx.closePath();
+        }
+
+        // نظام الجزيئات (Particles) للانفجارات
+        function createExplosion(x, y, color) {
+            for (let i = 0; i < 20; i++) {
+                particles.push({
+                    x, y,
+                    vx: (Math.random() - 0.5) * 6, vy: (Math.random() - 0.5) * 6,
+                    radius: Math.random() * 3 + 1,
+                    color, life: 30, opacity: 1
+                });
+            }
+        }
+
+        function updateAndRenderParticles() {
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.x += p.vx; p.y += p.vy;
+                p.vy += 0.1; // جاذبية خفيفة
+                p.life--; p.opacity = p.life / 30;
+                
+                if (p.life <= 0) { particles.splice(i, 1); continue; }
+
+                ctx.save();
+                ctx.globalAlpha = p.opacity; ctx.fillStyle = p.color;
+                ctx.shadowColor = p.color; ctx.shadowBlur = 10;
+                ctx.beginPath(); ctx.arc(p.x, p.y, p.radius, 0, Math.PI*2); ctx.fill();
+                ctx.restore();
+            }
+        }
+
+        // نظام النبضات (Pulses) للتغذية الراجعة البصرية
+        function createPulse(x, y, color) {
+            pulses.push({ x, y, r: 10, maxR: 100, color, opacity: 1 });
+        }
+
+        function updateAndRenderPulses() {
+            for (let i = pulses.length - 1; i >= 0; i--) {
+                const p = pulses[i];
+                p.r += 4; p.opacity = 1 - (p.r / p.maxR);
+                if (p.r >= p.maxR) { pulses.splice(i, 1); continue; }
+
+                ctx.save();
+                ctx.globalAlpha = p.opacity; ctx.strokeStyle = p.color;
+                ctx.lineWidth = 3; ctx.shadowColor = p.color; ctx.shadowBlur = 15;
+                ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI*2); ctx.stroke();
+                ctx.restore();
+            }
+        }
+
+        // === المودال العام ===
+        function showModal(t, b) { 
+            document.getElementById('modal-title').innerText = t; 
+            document.getElementById('modal-body').innerText = b; 
+            document.getElementById('game-modal').classList.add('open'); 
+        }
+        function closeModal() { document.getElementById('game-modal').classList.remove('open'); }
+    </script>
+</body>
+</html>
