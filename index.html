@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Spider Memory: Cyberpunk Edition</title>
+    <title>Spider Memory: Cyberpunk Spectator Edition</title>
     
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
@@ -16,7 +16,7 @@
             --neon-blue: #00d2ff;
             --danger: #ff0055;
             --bg-dark: #020204;
-            --glass: rgba(15, 15, 25, 0.85);
+            --glass: rgba(15, 15, 25, 0.9);
             --font-main: 'Orbitron', sans-serif;
         }
 
@@ -38,11 +38,6 @@
             background: var(--bg-dark); transition: 0.5s;
         }
 
-        #game-logo {
-            font-size: 40px; font-weight: 700; color: var(--neon-green);
-            text-shadow: 0 0 10px var(--neon-green); text-align: center;
-        }
-
         .btn {
             position: relative; padding: 18px 35px; background: transparent; color: white;
             border: 1px solid var(--neon-blue); font-family: var(--font-main); font-size: 14px;
@@ -53,79 +48,47 @@
 
         .btn-create { border-color: var(--neon-purple); color: var(--neon-purple); }
         .btn-join { background: var(--neon-green); color: black; border: none; font-weight: bold; }
-        .btn-exit { 
-            position: absolute; top: 20px; left: 20px; width: auto; padding: 8px 15px; 
-            border-color: var(--danger); color: var(--danger); font-size: 10px; z-index: 100;
-        }
-
-        #room-input {
-            width: 85%; max-width: 320px; padding: 15px; background: rgba(255,255,255,0.05);
-            border: 1px solid #333; color: var(--neon-green); text-align: center;
-            font-size: 20px; margin-bottom: 20px; outline: none;
-        }
+        .btn-exit { position: absolute; top: 20px; left: 20px; width: auto; padding: 8px 15px; border-color: var(--danger); color: var(--danger); font-size: 10px; z-index: 100; }
 
         #game-container { display: none; width: 100%; height: 100vh; position: relative; }
-        #game-canvas { width: 100%; height: 100%; cursor: crosshair; }
+        #game-canvas { width: 100%; height: 100%; }
 
-        #hud {
-            position: absolute; top: 0; width: 100%; padding: 20px;
-            display: flex; justify-content: space-between; pointer-events: none; z-index: 10;
-        }
-
-        .hud-item { background: var(--glass); padding: 12px 20px; border-left: 3px solid var(--neon-blue); font-size: 14px; }
+        #hud { position: absolute; top: 0; width: 100%; padding: 20px; display: flex; justify-content: space-between; pointer-events: none; }
+        .hud-item { background: var(--glass); padding: 10px 15px; border-left: 3px solid var(--neon-blue); font-size: 12px; }
 
         #turn-display {
-            position: absolute; top: 80px; left: 50%; transform: translateX(-50%);
-            background: var(--neon-purple); padding: 5px 25px; border-radius: 50px; font-size: 12px; font-weight: bold;
+            position: absolute; top: 75px; left: 50%; transform: translateX(-50%);
+            padding: 5px 25px; border-radius: 50px; font-size: 11px; font-weight: bold; text-align: center;
         }
 
-        #controls {
-            position: absolute; bottom: 30px; left: 0; width: 100%;
-            display: none; justify-content: center; gap: 15px; padding: 0 20px;
-        }
+        #controls { position: absolute; bottom: 30px; left: 0; width: 100%; display: none; justify-content: center; gap: 10px; padding: 0 20px; }
 
-        .modal {
-            position: fixed; inset: 0; background: rgba(0,0,0,0.9);
-            display: none; align-items: center; justify-content: center; z-index: 2000;
-        }
-
-        .modal-content {
-            background: var(--glass); border: 1px solid var(--neon-green);
-            padding: 40px; width: 90%; max-width: 400px; text-align: center;
-        }
-
-        .player-count { display: flex; gap: 10px; margin: 20px 0; width: 100%; }
-        .count-btn { flex: 1; padding: 15px; background: #111; border: 1px solid #333; color: white; cursor: pointer; }
-        .count-btn.active { border-color: var(--neon-green); color: var(--neon-green); }
+        .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.9); display: none; align-items: center; justify-content: center; z-index: 2000; }
+        .modal-content { background: var(--glass); border: 1px solid var(--neon-green); padding: 30px; width: 85%; text-align: center; }
+        
+        .status-dead { color: var(--danger); text-shadow: 0 0 10px var(--danger); font-weight: bold; }
     </style>
 </head>
 <body>
 
     <div id="main-menu">
-        <div id="game-logo">SPIDER MEMORY<br><span style="font-size:12px; color:var(--neon-blue)">نظام ذاكرة العناكب</span></div>
-        <br>
+        <h1 style="color:var(--neon-green)">SPIDER MEMORY</h1>
         <button class="btn" id="login-btn" onclick="handleAuth()">دخول النظام</button>
-
         <div id="lobby-ui" style="display: none; width: 100%; flex-direction: column; align-items: center;">
-            <div class="player-count">
-                <button class="count-btn active" onclick="updateMax(2, this)">2 لاعبين</button>
-                <button class="count-btn" onclick="updateMax(3, this)">3 لاعبين</button>
-                <button class="count-btn" onclick="updateMax(4, this)">4 لاعبين</button>
-            </div>
-            <button class="btn btn-create" onclick="createNewRoom()">إنشاء غرفة (Terminal)</button>
-            <input type="number" id="room-input" placeholder="0000">
+            <button class="btn btn-create" onclick="createNewRoom()">إنشاء غرفة</button>
+            <input type="number" id="room-input" style="width:80%; padding:15px; margin-bottom:10px; text-align:center;" placeholder="0000">
             <button class="btn btn-join" onclick="joinExistingRoom()">دخول الغرفة</button>
         </div>
     </div>
 
     <div id="game-container">
-        <button class="btn btn-exit" onclick="exitRoom()">خروج (EXIT)</button>
+        <button class="btn btn-exit" onclick="exitRoom()">خروج</button>
         <canvas id="game-canvas"></canvas>
         <div id="hud">
             <div class="hud-item" id="stats-hearts">HP: ❤️❤️❤️</div>
             <div class="hud-item" id="stats-room">NODE: #----</div>
         </div>
-        <div id="turn-display">جاري الربط بالخادم...</div>
+        <div id="turn-display"></div>
         <div id="controls">
             <button class="btn btn-join" style="margin:0; flex:1;" onclick="setMode('SELECT')">اختر كوب</button>
             <button class="btn btn-create" style="margin:0; flex:1;" onclick="triggerCardDraw()">اسحب كرت</button>
@@ -134,8 +97,8 @@
 
     <div id="msg-modal" class="modal">
         <div class="modal-content">
-            <h2 id="msg-title" style="color: var(--neon-green);"></h2>
-            <p id="msg-body" style="margin: 20px 0; line-height: 1.6;"></p>
+            <h2 id="msg-title"></h2>
+            <p id="msg-body"></p>
             <button class="btn btn-join" onclick="closeMsg()">موافق</button>
         </div>
     </div>
@@ -152,19 +115,15 @@
         };
 
         firebase.initializeApp(firebaseConfig);
-        const auth = firebase.auth();
-        const db = firebase.database();
-        
-        let currentUser, activeRoom, maxPlayers = 2, localGameState, playerMode = 'IDLE';
+        const auth = firebase.auth(), db = firebase.database();
+        let currentUser, activeRoom, localGameState, playerMode = 'IDLE';
         const canvas = document.getElementById('game-canvas'), ctx = canvas.getContext('2d');
         let cupBoundaries = [], vfxParticles = [], vfxPulses = [];
 
-        // === نظام النطق الصوتي ===
         function speak(text) {
-            const synth = window.speechSynthesis;
             const utter = new SpeechSynthesisUtterance(text);
             utter.lang = 'ar-SA';
-            synth.speak(utter);
+            window.speechSynthesis.speak(utter);
         }
 
         function handleAuth() { auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()); }
@@ -178,16 +137,10 @@
             }
         });
 
-        function updateMax(n, el) {
-            maxPlayers = n;
-            document.querySelectorAll('.count-btn').forEach(b => b.classList.remove('active'));
-            el.classList.add('active');
-        }
-
         async function createNewRoom() {
             const id = Math.floor(1000 + Math.random() * 9000);
             await db.ref('rooms/' + id).set({
-                config: { max: maxPlayers, status: 'LOBBY', turn: 0 },
+                config: { max: 2, status: 'LOBBY', turn: 0, lastEvent: "" },
                 cups: Array(30).fill({ state: 'closed' })
             });
             enterRoom(id);
@@ -206,56 +159,48 @@
             document.getElementById('main-menu').style.display = 'none';
             document.getElementById('game-container').style.display = 'block';
             document.getElementById('stats-room').innerText = `NODE: #` + id;
+            
+            // مراقبة الأحداث الصوتية للجميع
+            db.ref(`rooms/${id}/config/lastEvent`).on('value', snap => {
+                if(snap.val()) speak(snap.val());
+            });
+
             db.ref(`rooms/${id}`).on('value', snap => {
                 localGameState = snap.val();
                 if (localGameState) processFrame();
             });
         }
 
-        function exitRoom() { if (activeRoom) { db.ref(`rooms/${activeRoom}/players/${currentUser.uid}`).remove(); location.reload(); } }
+        function exitRoom() { location.reload(); }
 
         function processFrame() {
-            const me = localGameState.players[currentUser.uid];
-            const pIds = Object.keys(localGameState.players);
-            
-            // تحقق من الخسارة
+            const players = localGameState.players;
+            const me = players[currentUser.uid];
+            const pIds = Object.keys(players);
+            const turnIdx = localGameState.config.turn;
+
+            document.getElementById('stats-hearts').innerText = me.hp > 0 ? `HP: ` + "❤️".repeat(me.hp) : "وضع المشاهدة 👁️";
+
+            const turnDisplay = document.getElementById('turn-display');
             if (me.hp <= 0) {
-                speak("لقد تم تدميرك، انتهت اللعبة");
-                triggerMsg("GAME OVER", "لقد نفدت طاقتك.");
-                return;
-            }
-
-            // تحقق من الفائز
-            const alive = pIds.filter(id => localGameState.players[id].hp > 0);
-            if (alive.length === 1 && localGameState.config.status === 'ACTIVE') {
-                const winner = localGameState.players[alive[0]].name;
-                speak("انتهت اللعبة، الفائز هو " + winner);
-                triggerMsg("نهاية المهمة", "الفائز هو: " + winner);
-                db.ref(`rooms/${activeRoom}/config/status`).set('ENDED');
-                return;
-            }
-
-            document.getElementById('stats-hearts').innerText = `HP: ` + "❤️".repeat(Math.max(0, me.hp));
-
-            if (!me.ready) {
-                playerMode = 'SETUP';
-                document.getElementById('turn-display').innerText = `ضع 3 عناكب [${me.traps?.length || 0}/3]`;
+                turnDisplay.innerText = "أنت ميت - تشاهد الآن";
+                turnDisplay.className = "status-dead";
                 document.getElementById('controls').style.display = 'none';
-            } else if (localGameState.config.status === 'LOBBY') {
-                document.getElementById('turn-display').innerText = `في انتظار اللاعبين...`;
-                if (pIds.length == localGameState.config.max && Object.values(localGameState.players).every(p => p.ready)) {
-                    db.ref(`rooms/${activeRoom}/config/status`).set('ACTIVE');
-                }
+                playerMode = 'IDLE';
+            } else if (!me.ready) {
+                playerMode = 'SETUP';
+                turnDisplay.innerText = `ضع 3 فخاخ [${me.traps?.length || 0}/3]`;
+                turnDisplay.style.background = "var(--neon-purple)";
             } else {
-                const isTurn = pIds[localGameState.config.turn] === currentUser.uid;
-                const turnName = localGameState.players[pIds[localGameState.config.turn]].name;
-                document.getElementById('turn-display').innerText = isTurn ? "دورك الآن - تصرف!" : `انتظار: ${turnName}`;
+                const isTurn = pIds[turnIdx] === currentUser.uid;
+                const turnName = players[pIds[turnIdx]].name;
+                turnDisplay.innerText = isTurn ? "دورك الآن!" : `انتظار: ${turnName}`;
+                turnDisplay.style.background = isTurn ? "var(--neon-green)" : "#333";
                 document.getElementById('controls').style.display = isTurn ? 'flex' : 'none';
             }
         }
 
         function startEngine() {
-            window.addEventListener('resize', () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; });
             canvas.width = window.innerWidth; canvas.height = window.innerHeight;
             function frame() { render(); updateVFX(); requestAnimationFrame(frame); }
             requestAnimationFrame(frame);
@@ -264,27 +209,30 @@
         function render() {
             ctx.clearRect(0,0, canvas.width, canvas.height);
             if (!localGameState) return;
-            const cols=5, rows=6, gap=12, size=Math.min((canvas.width-80)/cols, (canvas.height-300)/rows);
+            const cols=5, rows=6, gap=10, size=Math.min((canvas.width-60)/cols, (canvas.height-280)/rows);
             const ox=(canvas.width-(size*cols+gap*(cols-1)))/2, oy=140;
             cupBoundaries = [];
+
             for (let i=0; i<30; i++) {
                 const x=ox+(i%cols)*(size+gap), y=oy+Math.floor(i/cols)*(size+gap);
                 cupBoundaries.push({x, y, size, index: i});
                 const data = localGameState.cups[i], me = localGameState.players[currentUser.uid];
                 ctx.save();
                 let color = '#1a1a25', icon = '';
+
                 if (playerMode === 'SETUP' && me.traps?.includes(i)) { color = '#bc13fe'; icon = '🕷️'; }
                 else if (data.state === 'open') {
                     let hasS = Object.values(localGameState.players).some(p => p.traps?.includes(i));
                     color = hasS ? '#ff0055' : '#00ff88'; icon = hasS ? '🕷️' : '✔';
                 }
                 ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.strokeRect(x,y,size,size);
-                ctx.fillStyle = color; ctx.font = `bold ${size/2}px Orbitron`; ctx.textAlign='center';
-                ctx.fillText(icon || '?', x+size/2, y+size/1.6); ctx.restore();
+                ctx.fillStyle = color; ctx.font = `bold ${size/2}px sans-serif`; ctx.textAlign='center';
+                ctx.fillText(icon || '?', x+size/2, y+size/1.5); ctx.restore();
             }
         }
 
         canvas.addEventListener('touchstart', e => {
+            if(localGameState.players[currentUser.uid].hp <= 0) return; // منع اللعب للميت
             const t = e.touches[0], r = canvas.getBoundingClientRect();
             const tx = t.clientX-r.left, ty = t.clientY-r.top;
             cupBoundaries.forEach(c => {
@@ -296,7 +244,7 @@
             if (playerMode === 'SETUP') {
                 let t = localGameState.players[currentUser.uid].traps || [];
                 if (t.length<3 && !t.includes(idx)) {
-                    t.push(idx); createPulse(cx, cy, '#bc13fe');
+                    t.push(idx);
                     await db.ref(`rooms/${activeRoom}/players/${currentUser.uid}/traps`).set(t);
                     if (t.length===3) await db.ref(`rooms/${activeRoom}/players/${currentUser.uid}/ready`).set(true);
                 }
@@ -306,10 +254,12 @@
                 let hasS = false; Object.values(localGameState.players).forEach(p => { if (p.traps?.includes(idx)) hasS = true; });
                 let up = {}; up[`cups/${idx}/state`] = 'open';
                 if (hasS) { 
-                    up[`players/${currentUser.uid}/hp`] = localGameState.players[currentUser.uid].hp - 1; 
-                    createExplosion(cx, cy, '#ff0055'); speak("انفجار، أصبت عنكبوت");
+                    up[`players/${currentUser.uid}/hp`] = localGameState.players[currentUser.uid].hp - 1;
+                    up[`config/lastEvent`] = "انفجار! " + localGameState.players[currentUser.uid].name + " لمس عنكبوتاً";
+                    createExp(cx, cy, '#ff0055');
                 } else {
-                    createPulse(cx, cy, '#00ff88'); speak("آمن");
+                    up[`config/lastEvent`] = "آمن";
+                    createPulse(cx, cy, '#00ff88');
                 }
                 up[`config/turn`] = (localGameState.config.turn + 1) % Object.keys(localGameState.players).length;
                 db.ref(`rooms/${activeRoom}`).update(up);
@@ -317,35 +267,37 @@
         }
 
         async function triggerCardDraw() {
-            const cards = ['إصلاح', 'رؤية', 'فيروس'];
+            const cards = [
+                {t: "إصلاح النظام", b: "تمت إضافة قلب إضافي لك", v: "إصلاح، طاقة زائدة", h: 1},
+                {t: "هجوم فيروسي", b: "خسرت قلباً بسبب عطل في النظام", v: "فيروس، تضرر النظام", h: -1},
+                {t: "تخطي الدور", b: "سوف تلعب مرة أخرى فوراً", v: "تسريع، دور إضافي", h: 0},
+                {t: "فخ مفاجئ", b: "عنكبوت عشوائي انفجر تحت قدمك", v: "فخ، خسرت قلباً", h: -1}
+            ];
             const card = cards[Math.floor(Math.random()*cards.length)];
-            speak(card);
             let up = {};
-            if (card === 'إصلاح') { 
-                up[`players/${currentUser.uid}/hp`] = localGameState.players[currentUser.uid].hp + 1;
-                triggerMsg("تم الإصلاح", "حصلت على طاقة إضافية.");
-            } else if (card === 'فيروس') {
-                up[`players/${currentUser.uid}/hp`] = localGameState.players[currentUser.uid].hp - 1;
-                triggerMsg("فيروس", "لقد تضررت من الكرت.");
-            } else {
-                triggerMsg("رؤية", "تم كشف مسارات آمنة.");
-                // logic for reveal...
+            up[`players/${currentUser.uid}/hp`] = Math.max(0, localGameState.players[currentUser.uid].hp + card.h);
+            up[`config/lastEvent`] = card.v;
+            
+            // لو كرت تخطي الدور، مغيرش الـ turn
+            if(card.t !== "تخطي الدور") {
+                up[`config/turn`] = (localGameState.config.turn + 1) % Object.keys(localGameState.players).length;
             }
-            up[`config/turn`] = (localGameState.config.turn + 1) % Object.keys(localGameState.players).length;
+            
             db.ref(`rooms/${activeRoom}`).update(up);
+            triggerMsg(card.t, card.b);
         }
 
-        function createExplosion(x, y, color) { for (let i=0; i<20; i++) vfxParticles.push({x, y, color, vx: (Math.random()-0.5)*10, vy: (Math.random()-0.5)*10, life: 1.0}); }
-        function createPulse(x, y, color) { vfxPulses.push({ x, y, r: 0, color, opacity: 1 }); }
+        function createExp(x,y,c) { for(let i=0;i<20;i++) vfxParticles.push({x,y,vx:(Math.random()-0.5)*10,vy:(Math.random()-0.5)*10,life:1,c}); }
+        function createPulse(x,y,c) { vfxPulses.push({x,y,r:0,opacity:1,c}); }
         function updateVFX() {
-            vfxParticles.forEach((p, i) => { p.x += p.vx; p.y += p.vy; p.life -= 0.03; if (p.life <= 0) vfxParticles.splice(i, 1); ctx.fillStyle = p.color; ctx.globalAlpha = p.life; ctx.beginPath(); ctx.arc(p.x, p.y, 2, 0, Math.PI*2); ctx.fill(); });
-            vfxPulses.forEach((p, i) => { p.r += 5; p.opacity -= 0.04; if (p.opacity <= 0) vfxPulses.splice(i, 1); ctx.strokeStyle = p.color; ctx.globalAlpha = p.opacity; ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI*2); ctx.stroke(); });
-            ctx.globalAlpha = 1;
+            vfxParticles.forEach((p,i)=>{ p.x+=p.vx;p.y+=p.vy;p.life-=0.02; if(p.life<=0)vfxParticles.splice(i,1); ctx.fillStyle=p.c;ctx.globalAlpha=p.life;ctx.beginPath();ctx.arc(p.x,p.y,2,0,7);ctx.fill(); });
+            vfxPulses.forEach((p,i)=>{ p.r+=4;p.opacity-=0.03; if(p.opacity<=0)vfxPulses.splice(i,1); ctx.strokeStyle=p.c;ctx.globalAlpha=p.opacity;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,7);ctx.stroke(); });
+            ctx.globalAlpha=1;
         }
 
         function setMode(m) { playerMode = m; }
-        function triggerMsg(t, b) { document.getElementById('msg-title').innerText = t; document.getElementById('msg-body').innerText = b; document.getElementById('msg-modal').style.display = 'flex'; }
-        function closeMsg() { document.getElementById('msg-modal').style.display = 'none'; if(localGameState.config.status==='ENDED') exitRoom(); }
+        function triggerMsg(t,b) { document.getElementById('msg-title').innerText=t; document.getElementById('msg-body').innerText=b; document.getElementById('msg-modal').style.display='flex'; }
+        function closeMsg() { document.getElementById('msg-modal').style.display='none'; }
     </script>
 </body>
 </html>
