@@ -337,14 +337,28 @@
         }
         requestAnimationFrame(animationLoop);
 
+        // === مراقبة حالة تسجيل الدخول (التعديل الجديد هنا) ===
+        // هذه الدالة تتأكد من نقل المستخدم للصفحة التالية فور نجاح التسجيل
+        auth.onAuthStateChanged((loggedInUser) => {
+            if (loggedInUser) {
+                // إذا وجد مستخدم مسجل، أخفِ زر جوجل واظهر خيارات الغرف
+                user = loggedInUser;
+                document.getElementById('login-btn').style.display = 'none';
+                document.getElementById('menu-actions').style.display = 'flex';
+                // تفعيل نظام التحريك
+                requestAnimationFrame(animationLoop);
+            } else {
+                // إذا لم يوجد مستخدم، عد لشاشة تسجيل الدخول
+                document.getElementById('login-btn').style.display = 'block';
+                document.getElementById('menu-actions').style.display = 'none';
+            }
+        });
 
         // === تسجيل الدخول وإنشاء الغرف (Logic) ===
         async function login() {
             try {
-                const res = await auth.signInWithPopup(provider);
-                user = res.user;
-                document.getElementById('login-btn').style.display = 'none';
-                document.getElementById('menu-actions').style.display = 'flex';
+                // هذه الدالة فقط تفتح النافذة المنبثقة، والمراقب فوق هو من يتولى الباقي
+                await auth.signInWithPopup(provider);
             } catch (error) { console.error(error); }
         }
 
@@ -710,3 +724,4 @@
     </script>
 </body>
 </html>
+
