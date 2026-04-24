@@ -3,210 +3,197 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ذاكرة العناكب: نيون</title>
+    <title>Spider Memory: Cyberpunk Edition</title>
+    
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
     
     <style>
+        /* === إعدادات التصميم (Cyberpunk UI) === */
         :root {
             --neon-green: #00ff88;
             --neon-purple: #bc13fe;
+            --neon-blue: #00d2ff;
             --danger: #ff0055;
             --bg-dark: #020204;
-            --card-bg: rgba(10, 10, 15, 0.9);
-            --font-main: 'Orbitron', 'Segoe UI', sans-serif;
+            --glass: rgba(15, 15, 25, 0.85);
+            --font-main: 'Orbitron', sans-serif;
         }
+
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap');
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
         body {
             background-color: var(--bg-dark);
+            background-image: 
+                radial-gradient(circle at 50% 50%, #10101a 0%, #000 100%),
+                linear-gradient(rgba(0, 255, 136, 0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 255, 136, 0.05) 1px, transparent 1px);
+            background-size: 100% 100%, 30px 30px, 30px 30px;
             color: white;
-            font-family: var(--font-main);
-            margin: 0;
-            padding: 0;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            min-height: 100vh;
-            overflow: hidden;
-            touch-action: none;
+            font-family: var(--font-main), sans-serif;
+            margin: 0; padding: 0;
+            height: 100vh; overflow: hidden;
+            display: flex; flex-direction: column; align-items: center;
         }
 
+        /* القائمة الرئيسية */
         #main-menu {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: radial-gradient(circle at center, #10101a 0%, #000 100%);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            z-index: 100;
-            transition: opacity 0.5s;
+            position: fixed; inset: 0;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            z-index: 1000; background: var(--bg-dark);
+            transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .logo-container {
+            text-align: center; margin-bottom: 40px;
+            animation: flicker 2s infinite;
+        }
+
+        @keyframes flicker {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.8; text-shadow: 0 0 20px var(--neon-green); }
         }
 
         #game-logo {
-            font-size: 40px;
-            text-transform: uppercase;
+            font-size: 45px; font-weight: 700;
             color: var(--neon-green);
-            text-shadow: 0 0 10px var(--neon-green), 0 0 20px var(--neon-green);
-            margin-bottom: 50px;
-            letter-spacing: 2px;
+            text-shadow: 0 0 10px var(--neon-green);
+            letter-spacing: 4px; line-height: 1;
         }
 
         .btn {
-            padding: 16px 30px;
-            border-radius: 5px;
-            border: 2px solid transparent;
-            font-weight: bold;
-            cursor: pointer;
-            transition: all 0.3s;
-            font-size: 16px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            font-family: var(--font-main);
-            width: 80%;
-            max-width: 300px;
-            margin-bottom: 15px;
-            text-align: center;
+            position: relative; padding: 18px 35px;
+            background: transparent; color: white;
+            border: 1px solid var(--neon-blue);
+            font-family: var(--font-main); font-size: 14px;
+            text-transform: uppercase; letter-spacing: 2px;
+            cursor: pointer; overflow: hidden;
+            width: 85%; max-width: 320px; margin-bottom: 20px;
+            transition: 0.3s; clip-path: polygon(10% 0, 100% 0, 100% 70%, 90% 100%, 0 100%, 0% 30%);
         }
 
-        .btn-google { background: white; color: #333; box-shadow: 0 4px 15px rgba(255,255,255,0.2); }
-        .btn-create { background: transparent; border-color: var(--neon-purple); color: var(--neon-purple); box-shadow: 0 0 15px rgba(188, 19, 254, 0.3); }
-        .btn-create:hover { background: var(--neon-purple); color: white; box-shadow: 0 0 30px var(--neon-purple); }
-        .btn-join { background: var(--neon-green); color: black; box-shadow: 0 0 15px rgba(0, 255, 136, 0.3); }
-
-        #menu-actions input {
-            padding: 15px;
-            border-radius: 5px;
-            border: 1px solid #333;
-            background: #0a0a0a;
-            color: white;
-            text-align: center;
-            font-size: 18px;
-            font-family: var(--font-main);
-            width: 80%;
-            max-width: 300px;
-            margin-bottom: 15px;
-            outline: none;
+        .btn::before {
+            content: ''; position: absolute; top: 0; left: -100%;
+            width: 100%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(0, 210, 255, 0.4), transparent);
+            transition: 0.5s;
         }
 
+        .btn:active::before { left: 100%; }
+        .btn-create { border-color: var(--neon-purple); color: var(--neon-purple); }
+        .btn-join { background: var(--neon-green); color: black; border: none; font-weight: bold; }
+
+        #room-input {
+            width: 85%; max-width: 320px; padding: 15px;
+            background: rgba(255,255,255,0.05); border: 1px solid #333;
+            color: var(--neon-green); text-align: center;
+            font-size: 20px; font-family: var(--font-main);
+            margin-bottom: 20px; outline: none;
+        }
+
+        /* حاوية اللعبة */
         #game-container { display: none; width: 100%; height: 100vh; position: relative; }
-        #game-canvas { width: 100%; height: 100%; }
+        #game-canvas { width: 100%; height: 100%; cursor: crosshair; }
 
+        /* شريط الحالة (HUD) */
         #hud {
-            position: absolute;
-            top: 0; left: 0; width: 100%;
-            padding: 15px;
-            box-sizing: border-box;
-            display: flex;
-            justify-content: space-between;
-            pointer-events: none;
-            z-index: 10;
+            position: absolute; top: 0; width: 100%;
+            padding: 20px; display: flex; justify-content: space-between;
+            pointer-events: none; z-index: 10;
         }
 
-        .hud-box {
-            background: var(--card-bg);
-            padding: 10px 15px;
-            border-radius: 5px;
-            border: 1px solid rgba(255,255,255,0.1);
-            backdrop-filter: blur(5px);
-            font-size: 14px;
+        .hud-item {
+            background: var(--glass); padding: 12px 20px;
+            border-left: 3px solid var(--neon-blue);
+            backdrop-filter: blur(10px); font-size: 14px;
         }
 
-        #turn-announcer-hud {
-            position: absolute;
-            top: 70px; left: 50%;
-            transform: translateX(-50%);
-            background: var(--neon-purple);
-            color: white;
-            padding: 8px 20px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: bold;
+        #turn-display {
+            position: absolute; top: 80px; left: 50%; transform: translateX(-50%);
+            background: var(--neon-purple); padding: 5px 25px;
+            border-radius: 50px; font-size: 12px; font-weight: bold;
             box-shadow: 0 0 15px var(--neon-purple);
-            white-space: nowrap;
         }
 
-        #action-bar {
-            position: absolute;
-            bottom: 20px; left: 50%;
-            transform: translateX(-50%);
-            display: none;
-            gap: 15px;
-            width: 90%;
-            max-width: 400px;
-            z-index: 10;
+        /* أزرار التحكم السفلية */
+        #controls {
+            position: absolute; bottom: 30px; left: 0; width: 100%;
+            display: none; justify-content: center; gap: 15px; padding: 0 20px;
         }
 
+        /* المودال */
         .modal {
-            position: fixed;
-            top: 50%; left: 50%;
-            transform: translate(-50%, -50%) scale(0.9);
-            background: var(--card-bg);
-            padding: 30px;
-            border-radius: 10px;
-            border: 1px solid var(--neon-green);
-            z-index: 1000;
-            text-align: center;
-            display: none;
-            width: 80%;
-            max-width: 350px;
-            box-shadow: 0 0 50px rgba(0,0,0,0.8);
-            backdrop-filter: blur(10px);
-            opacity: 0;
-            transition: all 0.3s;
+            position: fixed; inset: 0; background: rgba(0,0,0,0.9);
+            display: none; align-items: center; justify-content: center; z-index: 2000;
         }
 
-        .modal.open { display: block; opacity: 1; transform: translate(-50%, -50%) scale(1); }
-        .modal h2 { color: var(--neon-green); margin-top: 0; font-size: 22px; }
+        .modal-content {
+            background: var(--glass); border: 1px solid var(--neon-green);
+            padding: 40px; width: 90%; max-width: 400px; text-align: center;
+            box-shadow: 0 0 30px rgba(0, 255, 136, 0.2);
+        }
 
-        .player-count-select { display: flex; gap: 10px; justify-content: center; margin: 15px 0; width: 80%; max-width: 300px; }
-        .count-opt { flex: 1; background: #111; padding: 15px; border-radius: 5px; cursor: pointer; border: 1px solid #333; transition: 0.3s; font-weight: bold; text-align: center;}
-        .count-opt.active { border-color: var(--neon-green); background: rgba(0, 255, 136, 0.1); color: var(--neon-green); box-shadow: 0 0 10px rgba(0, 255, 136, 0.2); }
+        .player-count { display: flex; gap: 10px; margin: 20px 0; width: 100%; }
+        .count-btn { 
+            flex: 1; padding: 15px; background: #111; border: 1px solid #333; 
+            color: white; cursor: pointer; transition: 0.3s;
+        }
+        .count-btn.active { border-color: var(--neon-green); color: var(--neon-green); }
 
-        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap');
     </style>
 </head>
 <body>
 
     <div id="main-menu">
-        <div id="game-logo">Spider Memory</div>
-        <button class="btn btn-google" id="login-btn" onclick="login()">Sign in with Google</button>
-        
-        <div id="menu-actions" style="display: none; flex-direction: column; align-items: center; width: 100%;">
-            <p style="font-size: 14px; opacity: 0.7; margin-bottom: 5px;">إعداد غرفة جديدة:</p>
-            <div class="player-count-select">
-                <div class="count-opt active" onclick="setCount(2)">2</div>
-                <div class="count-opt" onclick="setCount(3)">3</div>
-                <div class="count-opt" onclick="setCount(4)">4</div>
+        <div class="logo-container">
+            <div id="game-logo">SPIDER<br>MEMORY</div>
+            <div style="font-size: 10px; letter-spacing: 5px; margin-top: 10px; color: var(--neon-blue);">SYSTEM ONLINE</div>
+        </div>
+
+        <button class="btn" id="login-btn" onclick="handleAuth()">Initialize Identity</button>
+
+        <div id="lobby-ui" style="display: none; width: 100%; flex-direction: column; align-items: center;">
+            <div class="player-count">
+                <button class="count-btn active" onclick="updateMax(2, this)">2-PLYR</button>
+                <button class="count-btn" onclick="updateMax(3, this)">3-PLYR</button>
+                <button class="count-btn" onclick="updateMax(4, this)">4-PLYR</button>
             </div>
-            <button class="btn btn-create" onclick="createRoom()">Create Room</button>
-            <div style="width: 80%; max-width: 300px; height: 1px; background: #222; margin: 15px 0;"></div>
-            <input type="text" id="room-input" placeholder="الكود (مثلاً: 1234)" maxlength="4">
-            <button class="btn btn-join" onclick="joinRoom()">Join Room</button>
+            <button class="btn btn-create" onclick="createNewRoom()">Create Terminal</button>
+            <div style="margin: 20px 0; color: #444;">OR</div>
+            <input type="number" id="room-input" placeholder="0000">
+            <button class="btn btn-join" onclick="joinExistingRoom()">Join Terminal</button>
         </div>
     </div>
 
     <div id="game-container">
         <canvas id="game-canvas"></canvas>
+        
         <div id="hud">
-            <div class="hud-box" id="player-hearts-hud">❤️❤️❤️</div>
-            <div class="hud-box" id="room-display-hud">#----</div>
+            <div class="hud-item" id="stats-hearts">HP: ❤️❤️❤️</div>
+            <div class="hud-item" id="stats-room">NODE: #----</div>
         </div>
-        <div id="turn-announcer-hud">جاري التحميل...</div>
-        <div id="action-bar">
-            <button class="btn btn-join" style="flex:1; margin:0;" onclick="startCupSelection()">اسحب كوب</button>
-            <button class="btn btn-create" style="flex:1; margin:0;" onclick="drawCard()">اسحب كرت</button>
+
+        <div id="turn-display">WAITING FOR UPLINK...</div>
+
+        <div id="controls">
+            <button class="btn btn-join" style="margin:0; flex:1;" onclick="setMode('SELECT')">PICK CUP</button>
+            <button class="btn btn-create" style="margin:0; flex:1;" onclick="triggerCardDraw()">DRAW CARD</button>
         </div>
     </div>
 
-    <div id="game-modal" class="modal">
-        <h2 id="modal-title"></h2>
-        <p id="modal-body"></p>
-        <button class="btn btn-join" style="width:auto; margin-top:15px;" onclick="closeModal()">موافق</button>
+    <div id="msg-modal" class="modal">
+        <div class="modal-content">
+            <h2 id="msg-title" style="color: var(--neon-green); font-size: 24px;"></h2>
+            <p id="msg-body" style="margin: 20px 0; line-height: 1.6;"></p>
+            <button class="btn btn-join" onclick="closeMsg()">ACKNOWLEDGE</button>
+        </div>
     </div>
 
     <script>
+        // === CORE CONFIG ===
         const firebaseConfig = {
             apiKey: "AIzaSyDh0y_wU6wTUMJgmKHpLC4jPemXgoQqhKM",
             authDomain: "spitar-game.firebaseapp.com",
@@ -220,243 +207,295 @@
         firebase.initializeApp(firebaseConfig);
         const auth = firebase.auth();
         const db = firebase.database();
-        const provider = new firebase.auth.GoogleAuthProvider();
+        
+        let currentUser = null;
+        let activeRoom = null;
+        let maxPlayers = 2;
+        let localGameState = null;
+        let playerMode = 'IDLE'; // IDLE, SETUP, SELECT
 
-        let user = null, roomCode = null, selectedCount = 2, gameState = null;
-        let isMyTurn = false;
-        let interactionMode = 'NONE';
         const canvas = document.getElementById('game-canvas');
         const ctx = canvas.getContext('2d');
-        let cupsRects = [];
-        let particles = [], pulses = [];
+        let cupBoundaries = [];
+        let vfxParticles = [];
+        let vfxPulses = [];
 
-        const COLORS = { green: '#00ff88', purple: '#bc13fe', danger: '#ff0055', cup_off: '#1a1a22', cup_on: '#0a0a0f' };
-
-        function resizeCanvas() {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-            if (gameState) renderGameCanvas();
-        }
-        window.addEventListener('resize', resizeCanvas);
-        resizeCanvas();
-
-        function animationLoop() {
-            if (gameState && document.getElementById('game-container').style.display === 'block') {
-                renderGameCanvas();
-                updateAndRenderParticles();
-                updateAndRenderPulses();
-            }
-            requestAnimationFrame(animationLoop);
+        // === AUTHENTICATION ===
+        function handleAuth() {
+            const provider = new firebase.auth.GoogleAuthProvider();
+            auth.signInWithPopup(provider);
         }
 
-        auth.onAuthStateChanged((loggedInUser) => {
-            if (loggedInUser) {
-                user = loggedInUser;
+        auth.onAuthStateChanged(user => {
+            if (user) {
+                currentUser = user;
                 document.getElementById('login-btn').style.display = 'none';
-                document.getElementById('menu-actions').style.display = 'flex';
-                requestAnimationFrame(animationLoop);
+                document.getElementById('lobby-ui').style.display = 'flex';
+                startEngine();
             }
         });
 
-        async function login() {
-            try { await auth.signInWithPopup(provider); } catch (e) { alert("خطأ في تسجيل الدخول"); }
+        // === ROOM MANAGEMENT ===
+        function updateMax(num, el) {
+            maxPlayers = num;
+            document.querySelectorAll('.count-btn').forEach(b => b.classList.remove('active'));
+            el.classList.add('active');
         }
 
-        function setCount(n) {
-            selectedCount = n;
-            document.querySelectorAll('.count-opt').forEach(el => el.classList.remove('active'));
-            event.currentTarget.classList.add('active');
+        async function createNewRoom() {
+            const id = Math.floor(1000 + Math.random() * 9000);
+            await db.ref('rooms/' + id).set({
+                config: { max: maxPlayers, status: 'LOBBY', turn: 0 },
+                cups: Array(30).fill({ state: 'closed', type: 'void' }),
+                timestamp: Date.now()
+            });
+            enterRoom(id);
         }
 
-        async function createRoom() {
-            try {
-                // تحويل الكود لنص فوراً لتجنب مشاكل الـ length
-                let newCode = Math.floor(1000 + Math.random() * 9000).toString();
-                await db.ref('rooms/' + newCode).set({
-                    maxPlayers: selectedCount,
-                    status: 'WAITING',
-                    turnIndex: 0,
-                    cups: Array(30).fill({ revealed: false, type: 'empty' }),
-                    createdAt: firebase.database.ServerValue.TIMESTAMP
-                });
-                joinRoom(newCode); 
-            } catch (e) { alert("فشل إنشاء الغرفة، تأكد من اتصال الإنترنت"); }
+        function joinExistingRoom() {
+            const id = document.getElementById('room-input').value;
+            if (id.length === 4) enterRoom(id);
         }
 
-        async function joinRoom(codeFromCreate) {
-            try {
-                roomCode = (codeFromCreate || document.getElementById('room-input').value).toString();
-                if (!roomCode || roomCode.length < 4) return alert("الكود غير صحيح");
+        async function enterRoom(id) {
+            activeRoom = id;
+            await db.ref(`rooms/${id}/players/${currentUser.uid}`).set({
+                name: currentUser.displayName.split(' ')[0],
+                hp: 3,
+                traps: [],
+                ready: false
+            });
 
-                const snap = await db.ref('rooms/' + roomCode).once('value');
-                if(!snap.exists()) return alert("هذه الغرفة غير موجودة!");
-
-                await db.ref(`rooms/${roomCode}/players/${user.uid}`).update({
-                    name: user.displayName, hearts: 3, spiders: [], ready: false, photo: user.photoURL
-                });
-                startSync();
-            } catch (e) { alert("حدث خطأ أثناء الانضمام"); }
+            document.getElementById('main-menu').style.transform = 'translateY(-100%)';
+            document.getElementById('game-container').style.display = 'block';
+            document.getElementById('stats-room').innerText = `NODE: #` + id;
+            
+            syncRoom();
         }
 
-        function startSync() {
-            document.getElementById('main-menu').style.opacity = '0';
-            setTimeout(() => {
-                document.getElementById('main-menu').style.display = 'none';
-                document.getElementById('game-container').style.display = 'block';
-                document.getElementById('room-display-hud').innerText = "#" + roomCode;
-                resizeCanvas();
-            }, 500);
-
-            db.ref('rooms/' + roomCode).on('value', snap => {
-                gameState = snap.val();
-                if(gameState) handleGameStateUpdate();
+        function syncRoom() {
+            db.ref(`rooms/${activeRoom}`).on('value', snapshot => {
+                localGameState = snapshot.val();
+                if (localGameState) processFrame();
             });
         }
 
-        function handleGameStateUpdate() {
-            const me = gameState.players[user.uid];
-            if(!me) return;
-            document.getElementById('player-hearts-hud').innerText = "❤️".repeat(me.hearts);
-            const pIds = Object.keys(gameState.players);
-            const currentTurnId = pIds[gameState.turnIndex];
-            isMyTurn = (currentTurnId === user.uid && gameState.status === 'PLAYING');
+        // === GAME LOGIC ===
+        function processFrame() {
+            const me = localGameState.players[currentUser.uid];
+            const pIds = Object.keys(localGameState.players);
+            const isTurn = pIds[localGameState.config.turn] === currentUser.uid;
+
+            document.getElementById('stats-hearts').innerText = `HP: ` + "❤️".repeat(me.hp);
 
             if (!me.ready) {
-                interactionMode = 'SETUP_SPIDERS';
-                document.getElementById('turn-announcer-hud').innerText = `ضع 3 عناكب! (${me.spiders?.length || 0}/3)`;
-                document.getElementById('action-bar').style.display = 'none';
-            } else if (gameState.status === 'WAITING') {
-                interactionMode = 'NONE';
-                document.getElementById('turn-announcer-hud').innerText = "انتظار بقية اللاعبين...";
-                document.getElementById('action-bar').style.display = 'none';
-            } else if (gameState.status === 'PLAYING') {
-                document.getElementById('turn-announcer-hud').innerText = isMyTurn ? "دورك! احذر من عناكبك!" : `دور: ${gameState.players[currentTurnId].name}`;
-                document.getElementById('action-bar').style.display = isMyTurn ? 'flex' : 'none';
+                playerMode = 'SETUP';
+                document.getElementById('turn-display').innerText = `DEPLOY 3 SPIDERS [${me.traps?.length || 0}/3]`;
+                document.getElementById('controls').style.display = 'none';
+            } else if (localGameState.config.status === 'LOBBY') {
+                document.getElementById('turn-display').innerText = `WAITING FOR CONNECTION...`;
+                if (pIds.length == localGameState.config.max && Object.values(localGameState.players).every(p => p.ready)) {
+                    db.ref(`rooms/${activeRoom}/config/status`).set('ACTIVE');
+                }
+            } else {
+                const turnName = localGameState.players[pIds[localGameState.config.turn]].name;
+                document.getElementById('turn-display').innerText = isTurn ? "YOUR TURN - OPERATE" : `PENDING: ${turnName.toUpperCase()}`;
+                document.getElementById('controls').style.display = isTurn ? 'flex' : 'none';
             }
         }
 
-        function renderGameCanvas() {
-            ctx.fillStyle = '#0a0a12';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            if (!gameState) return;
-            const cols = 5, rows = 6, gap = 10, topP = 120, botP = 100;
-            const size = Math.min((canvas.width - gap*6)/cols, (canvas.height - topP - botP - gap*7)/rows);
-            const startX = (canvas.width - (size * cols + gap * 4)) / 2;
-            cupsRects = [];
-            const me = gameState.players[user.uid];
+        // === ENGINE & RENDERING ===
+        function startEngine() {
+            function frame() {
+                render();
+                updateVFX();
+                requestAnimationFrame(frame);
+            }
+            resize();
+            window.addEventListener('resize', resize);
+            requestAnimationFrame(frame);
+        }
+
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+
+        function render() {
+            ctx.clearRect(0,0, canvas.width, canvas.height);
+            if (!localGameState) return;
+
+            const cols = 5, rows = 6, gap = 12;
+            const size = Math.min((canvas.width - 80) / cols, (canvas.height - 300) / rows);
+            const offsetX = (canvas.width - (size * cols + gap * (cols - 1))) / 2;
+            const offsetY = 140;
+
+            cupBoundaries = [];
 
             for (let i = 0; i < 30; i++) {
-                const x = startX + (i % cols) * (size + gap), y = topP + Math.floor(i/cols) * (size + gap);
-                cupsRects.push({ x, y, w: size, h: size });
-                drawNeonCup(x, y, size, gameState.cups[i], me, i);
+                const x = offsetX + (i % cols) * (size + gap);
+                const y = offsetY + Math.floor(i / cols) * (size + gap);
+                cupBoundaries.push({ x, y, size, index: i });
+
+                const data = localGameState.cups[i];
+                const me = localGameState.players[currentUser.uid];
+                
+                ctx.save();
+                let color = '#1a1a25';
+                let icon = '';
+
+                // منطق الإظهار
+                if (playerMode === 'SETUP' && me.traps?.includes(i)) {
+                    color = varColor('--neon-purple'); icon = '🕷️';
+                } else if (data.state === 'open') {
+                    const isSpider = Object.values(localGameState.players).some(p => p.traps?.includes(i));
+                    color = isSpider ? varColor('--danger') : varColor('--neon-green');
+                    icon = isSpider ? '🕷️' : '✔';
+                }
+
+                // رسم الكوب النيوني
+                ctx.shadowBlur = (color !== '#1a1a25') ? 15 : 0;
+                ctx.shadowColor = color;
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 2;
+                ctx.fillStyle = 'rgba(10, 10, 15, 0.9)';
+                
+                roundRect(ctx, x, y, size, size, 5, true, true);
+                
+                ctx.fillStyle = color;
+                ctx.font = `bold ${size/2.5}px Orbitron`;
+                ctx.textAlign = 'center';
+                ctx.fillText(icon || '?', x + size/2, y + size/1.6);
+                ctx.restore();
             }
         }
 
-        function drawNeonCup(x, y, size, data, me, index) {
-            ctx.save();
-            ctx.fillStyle = COLORS.cup_off;
-            ctx.strokeStyle = 'rgba(255,255,255,0.1)';
-            let glow = null, icon = '?';
-            if (interactionMode === 'SETUP_SPIDERS' && me.spiders?.includes(index)) { glow = COLORS.purple; icon = '🕷️'; }
-            if (data.revealed) { 
-                glow = data.type === 'spider' ? COLORS.danger : COLORS.green; 
-                icon = data.type === 'spider' ? '🕷️' : '💨';
-                ctx.fillStyle = COLORS.cup_on;
-            }
-            if (glow) { ctx.shadowColor = glow; ctx.shadowBlur = 15; ctx.strokeStyle = glow; }
-            drawRoundedRect(ctx, x, y, size, size, 8);
-            ctx.fill(); ctx.stroke();
-            ctx.fillStyle = glow || 'white'; ctx.font = `${size/2}px Arial`;
-            ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-            ctx.fillText(icon, x + size/2, y + size/2);
-            ctx.restore();
-        }
-
-        canvas.onclick = (e) => {
+        // === INTERACTIONS ===
+        canvas.addEventListener('touchstart', e => {
+            const touch = e.touches[0];
             const rect = canvas.getBoundingClientRect();
-            const mx = e.clientX - rect.left, my = e.clientY - rect.top;
-            cupsRects.forEach((c, i) => {
-                if (mx >= c.x && mx <= c.x + c.w && my >= c.y && my <= c.y + c.h) handleCupClick(i, c.x + c.w/2, c.y + c.h/2);
-            });
-        };
+            const tx = touch.clientX - rect.left;
+            const ty = touch.clientY - rect.top;
 
-        async function handleCupClick(index, cx, cy) {
-            const me = gameState.players[user.uid];
-            if (interactionMode === 'SETUP_SPIDERS') {
-                let s = me.spiders || [];
-                if(s.includes(index) || s.length >= 3) return;
-                s.push(index); createPulse(cx, cy, COLORS.purple);
-                await db.ref(`rooms/${roomCode}/players/${user.uid}/spiders`).set(s);
-                if(s.length === 3) {
-                    await db.ref(`rooms/${roomCode}/players/${user.uid}/ready`).set(true);
-                    const snap = await db.ref(`rooms/${roomCode}/players`).once('value');
-                    const allReady = Object.values(snap.val()).every(p => p.ready);
-                    if(Object.keys(snap.val()).length == gameState.maxPlayers && allReady) db.ref(`rooms/${roomCode}/status`).set('PLAYING');
+            cupBoundaries.forEach(cup => {
+                if (tx > cup.x && tx < cup.x + cup.size && ty > cup.y && ty < cup.y + cup.size) {
+                    handleInteraction(cup.index, cup.x + cup.size/2, cup.y + cup.size/2);
                 }
-            } else if (interactionMode === 'SELECT_CUP' && isMyTurn && !gameState.cups[index].revealed) {
-                let hasS = Object.values(gameState.players).some(p => p.spiders?.includes(index));
+            });
+        });
+
+        async function handleInteraction(idx, cx, cy) {
+            if (playerMode === 'SETUP') {
+                let traps = localGameState.players[currentUser.uid].traps || [];
+                if (traps.length < 3 && !traps.includes(idx)) {
+                    traps.push(idx);
+                    createPulse(cx, cy, varColor('--neon-purple'));
+                    await db.ref(`rooms/${activeRoom}/players/${currentUser.uid}/traps`).set(traps);
+                    if (traps.length === 3) await db.ref(`rooms/${activeRoom}/players/${currentUser.uid}/ready`).set(true);
+                }
+            } else if (playerMode === 'SELECT') {
+                const isTurn = Object.keys(localGameState.players)[localGameState.config.turn] === currentUser.uid;
+                if (!isTurn || localGameState.cups[idx].state === 'open') return;
+
+                playerMode = 'IDLE';
+                let isSpider = false;
+                Object.values(localGameState.players).forEach(p => { if (p.traps?.includes(idx)) isSpider = true; });
+
                 let updates = {};
-                updates[`cups/${index}`] = { revealed: true, type: hasS ? 'spider' : 'empty' };
-                if (hasS) { updates[`players/${user.uid}/hearts`] = me.hearts - 1; createExplosion(cx, cy, COLORS.danger); }
-                updates['turnIndex'] = (gameState.turnIndex + 1) % Object.keys(gameState.players).length;
-                await db.ref(`rooms/${roomCode}`).update(updates);
-                interactionMode = 'NONE';
+                updates[`cups/${idx}/state`] = 'open';
+                if (isSpider) {
+                    updates[`players/${currentUser.uid}/hp`] = localGameState.players[currentUser.uid].hp - 1;
+                    createExplosion(cx, cy, varColor('--danger'));
+                    triggerMsg("BREACH!", "You hit a spider drone. Integrity compromised.");
+                } else {
+                    createPulse(cx, cy, varColor('--neon-green'));
+                }
+
+                updates[`config/turn`] = (localGameState.config.turn + 1) % Object.keys(localGameState.players).length;
+                db.ref(`rooms/${activeRoom}`).update(updates);
             }
         }
 
-        function startCupSelection() { if (isMyTurn) interactionMode = 'SELECT_CUP'; }
+        function setMode(m) { playerMode = m; }
 
-        async function drawCard() {
-            if (!isMyTurn) return;
-            const cards = ['REVEAL_3', 'PARDON', 'TRAP'];
-            const card = cards[Math.floor(Math.random() * cards.length)];
-            let updates = {}, nextT = (gameState.turnIndex + 1) % Object.keys(gameState.players).length;
-            if(card === 'REVEAL_3') {
-                showModal("كرت الكاشف", "كشف 3 أكواب فارغة!");
-                let count = 0, ids = Array.from({length: 30}, (_, i) => i).sort(() => 0.5 - Math.random());
-                for(let i of ids) {
-                    if(count >= 3) break;
-                    let hasS = Object.values(gameState.players).some(p => p.spiders?.includes(i));
-                    if(!hasS && !gameState.cups[i].revealed) { updates[`cups/${i}`] = { revealed: true, type: 'empty' }; count++; }
+        async function triggerCardDraw() {
+            const types = ['GLITCH', 'SCAN', 'REPAIR'];
+            const card = types[Math.floor(Math.random() * types.length)];
+            let up = {};
+            let nextTurn = (localGameState.config.turn + 1) % Object.keys(localGameState.players).length;
+
+            if (card === 'SCAN') {
+                triggerMsg("SCANNER ACTIVE", "3 empty nodes revealed on your grid.");
+                let found = 0;
+                for (let i=0; i<30; i++) {
+                    let hasS = Object.values(localGameState.players).some(p => p.traps?.includes(i));
+                    if (!hasS && localGameState.cups[i].state === 'closed' && found < 3) {
+                        up[`cups/${i}/state`] = 'open'; found++;
+                    }
                 }
-            } else if(card === 'PARDON') { showModal("كرت العفو", "دور إضافي!"); nextT = gameState.turnIndex; }
-            else { showModal("فخ نيون!", "فقدت قلباً!"); updates[`players/${user.uid}/hearts`] = gameState.players[user.uid].hearts - 1; }
-            updates['turnIndex'] = nextT;
-            await db.ref(`rooms/${roomCode}`).update(updates);
+            } else if (card === 'GLITCH') {
+                triggerMsg("SYSTEM GLITCH", "Extra operation cycle granted.");
+                nextTurn = localGameState.config.turn;
+            } else {
+                triggerMsg("MALWARE", "Card was corrupted. HP lost.");
+                up[`players/${currentUser.uid}/hp`] = localGameState.players[currentUser.uid].hp - 1;
+            }
+
+            up[`config/turn`] = nextTurn;
+            db.ref(`rooms/${activeRoom}`).update(up);
         }
 
-        function drawRoundedRect(ctx, x, y, w, h, r) {
-            ctx.beginPath(); ctx.roundRect(x, y, w, h, r); ctx.closePath();
-        }
-
+        // === VFX HELPERS ===
         function createExplosion(x, y, color) {
-            for (let i = 0; i < 15; i++) particles.push({ x, y, vx: (Math.random()-0.5)*5, vy: (Math.random()-0.5)*5, r: 2, color, life: 25 });
+            for (let i=0; i<25; i++) {
+                vfxParticles.push({
+                    x, y, color,
+                    vx: (Math.random()-0.5)*10, vy: (Math.random()-0.5)*10,
+                    life: 1.0
+                });
+            }
         }
 
-        function updateAndRenderParticles() {
-            particles.forEach((p, i) => {
-                p.x += p.vx; p.y += p.vy; p.life--;
-                if(p.life <= 0) particles.splice(i, 1);
-                ctx.fillStyle = p.color; ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI*2); ctx.fill();
+        function createPulse(x, y, color) {
+            vfxPulses.push({ x, y, r: 0, color, opacity: 1 });
+        }
+
+        function updateVFX() {
+            vfxParticles.forEach((p, i) => {
+                p.x += p.vx; p.y += p.vy; p.life -= 0.03;
+                if (p.life <= 0) vfxParticles.splice(i, 1);
+                ctx.fillStyle = p.color; ctx.globalAlpha = p.life;
+                ctx.beginPath(); ctx.arc(p.x, p.y, 2, 0, Math.PI*2); ctx.fill();
             });
-        }
-
-        function createPulse(x, y, color) { pulses.push({ x, y, r: 5, max: 80, color, op: 1 }); }
-        function updateAndRenderPulses() {
-            pulses.forEach((p, i) => {
-                p.r += 3; p.op -= 0.02;
-                if(p.op <= 0) pulses.splice(i, 1);
-                ctx.strokeStyle = p.color; ctx.globalAlpha = p.op; ctx.lineWidth = 2;
-                ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI*2); ctx.stroke(); ctx.globalAlpha = 1;
+            vfxPulses.forEach((p, i) => {
+                p.r += 5; p.opacity -= 0.04;
+                if (p.opacity <= 0) vfxPulses.splice(i, 1);
+                ctx.strokeStyle = p.color; ctx.globalAlpha = p.opacity;
+                ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI*2); ctx.stroke();
             });
+            ctx.globalAlpha = 1;
         }
 
-        function showModal(t, b) { 
-            document.getElementById('modal-title').innerText = t; 
-            document.getElementById('modal-body').innerText = b; 
-            document.getElementById('game-modal').classList.add('open'); 
+        // === UTILS ===
+        function varColor(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+        
+        function roundRect(ctx, x, y, width, height, radius, fill, stroke) {
+            ctx.beginPath(); ctx.moveTo(x + radius, y);
+            ctx.lineTo(x + width - radius, y); ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+            ctx.lineTo(x + width, y + height - radius); ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+            ctx.lineTo(x + radius, y + height); ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+            ctx.lineTo(x, y + radius); ctx.quadraticCurveTo(x, y, x + radius, y); ctx.closePath();
+            if (fill) ctx.fill(); if (stroke) ctx.stroke();
         }
-        function closeModal() { document.getElementById('game-modal').classList.remove('open'); }
+
+        function triggerMsg(t, b) {
+            document.getElementById('msg-title').innerText = t;
+            document.getElementById('msg-body').innerText = b;
+            document.getElementById('msg-modal').style.display = 'flex';
+        }
+
+        function closeMsg() { document.getElementById('msg-modal').style.display = 'none'; }
+
     </script>
 </body>
 </html>
