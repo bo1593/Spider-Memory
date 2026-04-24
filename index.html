@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Spider Memory: Cyberpunk Spectator Edition</title>
+    <title>Spider Memory: Cyberpunk Elite</title>
     
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
@@ -16,7 +16,7 @@
             --neon-blue: #00d2ff;
             --danger: #ff0055;
             --bg-dark: #020204;
-            --glass: rgba(15, 15, 25, 0.9);
+            --glass: rgba(15, 15, 25, 0.95);
             --font-main: 'Orbitron', sans-serif;
         }
 
@@ -29,65 +29,81 @@
             background-image: radial-gradient(circle at 50% 50%, #10101a 0%, #000 100%);
             color: white; font-family: var(--font-main), sans-serif;
             margin: 0; padding: 0; height: 100vh; overflow: hidden;
-            display: flex; flex-direction: column; align-items: center;
         }
 
+        /* القائمة الجانبية */
+        #side-menu {
+            position: fixed; top: 0; right: -280px; width: 280px; height: 100%;
+            background: var(--glass); border-left: 2px solid var(--neon-blue);
+            z-index: 2000; transition: 0.4s; padding: 20px;
+        }
+        #side-menu.open { right: 0; }
+        .menu-toggle {
+            position: absolute; top: 20px; right: 20px; font-size: 24px;
+            color: var(--neon-blue); cursor: pointer; z-index: 2100;
+        }
+
+        .player-row {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 10px; border-bottom: 1px solid #222; margin-bottom: 5px;
+        }
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; }
+
+        /* باقي الواجهة */
         #main-menu {
             position: fixed; inset: 0; display: flex; flex-direction: column;
-            align-items: center; justify-content: center; z-index: 1000;
-            background: var(--bg-dark); transition: 0.5s;
+            align-items: center; justify-content: center; z-index: 1000; background: var(--bg-dark);
         }
 
         .btn {
-            position: relative; padding: 18px 35px; background: transparent; color: white;
-            border: 1px solid var(--neon-blue); font-family: var(--font-main); font-size: 14px;
-            text-transform: uppercase; letter-spacing: 2px; cursor: pointer;
-            width: 85%; max-width: 320px; margin-bottom: 20px; transition: 0.3s;
+            padding: 15px 30px; background: transparent; color: white;
+            border: 1px solid var(--neon-blue); font-family: var(--font-main);
+            width: 85%; max-width: 300px; margin-bottom: 10px; cursor: pointer;
             clip-path: polygon(10% 0, 100% 0, 100% 70%, 90% 100%, 0 100%, 0% 30%);
         }
 
         .btn-create { border-color: var(--neon-purple); color: var(--neon-purple); }
         .btn-join { background: var(--neon-green); color: black; border: none; font-weight: bold; }
-        .btn-exit { position: absolute; top: 20px; left: 20px; width: auto; padding: 8px 15px; border-color: var(--danger); color: var(--danger); font-size: 10px; z-index: 100; }
 
         #game-container { display: none; width: 100%; height: 100vh; position: relative; }
         #game-canvas { width: 100%; height: 100%; }
 
-        #hud { position: absolute; top: 0; width: 100%; padding: 20px; display: flex; justify-content: space-between; pointer-events: none; }
-        .hud-item { background: var(--glass); padding: 10px 15px; border-left: 3px solid var(--neon-blue); font-size: 12px; }
-
         #turn-display {
-            position: absolute; top: 75px; left: 50%; transform: translateX(-50%);
-            padding: 5px 25px; border-radius: 50px; font-size: 11px; font-weight: bold; text-align: center;
+            position: absolute; top: 80px; left: 50%; transform: translateX(-50%);
+            padding: 8px 25px; border-radius: 50px; font-size: 11px; font-weight: bold;
+            z-index: 50; min-width: 180px; text-align: center;
         }
 
-        #controls { position: absolute; bottom: 30px; left: 0; width: 100%; display: none; justify-content: center; gap: 10px; padding: 0 20px; }
+        #controls { position: absolute; bottom: 30px; width: 100%; display: none; justify-content: center; gap: 10px; padding: 0 20px; }
 
-        .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.9); display: none; align-items: center; justify-content: center; z-index: 2000; }
+        .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.9); display: none; align-items: center; justify-content: center; z-index: 3000; }
         .modal-content { background: var(--glass); border: 1px solid var(--neon-green); padding: 30px; width: 85%; text-align: center; }
-        
-        .status-dead { color: var(--danger); text-shadow: 0 0 10px var(--danger); font-weight: bold; }
+
+        #winner-screen { position: fixed; inset: 0; background: #000; display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 4000; }
     </style>
 </head>
 <body>
 
+    <div class="menu-toggle" onclick="toggleSidebar()">☰</div>
+
+    <div id="side-menu">
+        <h3 style="color:var(--neon-blue)">نظام المراقبة</h3>
+        <div id="players-list"></div>
+        <button class="btn btn-create" style="margin-top: 30px; font-size: 10px;" onclick="exitRoom()">خروج من الغرفة</button>
+    </div>
+
     <div id="main-menu">
         <h1 style="color:var(--neon-green)">SPIDER MEMORY</h1>
         <button class="btn" id="login-btn" onclick="handleAuth()">دخول النظام</button>
-        <div id="lobby-ui" style="display: none; width: 100%; flex-direction: column; align-items: center;">
+        <div id="lobby-ui" style="display: none; flex-direction: column; align-items: center; width: 100%;">
             <button class="btn btn-create" onclick="createNewRoom()">إنشاء غرفة</button>
-            <input type="number" id="room-input" style="width:80%; padding:15px; margin-bottom:10px; text-align:center;" placeholder="0000">
+            <input type="number" id="room-input" style="width:80%; padding:15px; margin-bottom:10px; text-align:center; background:#000; color:#fff;" placeholder="0000">
             <button class="btn btn-join" onclick="joinExistingRoom()">دخول الغرفة</button>
         </div>
     </div>
 
     <div id="game-container">
-        <button class="btn btn-exit" onclick="exitRoom()">خروج</button>
         <canvas id="game-canvas"></canvas>
-        <div id="hud">
-            <div class="hud-item" id="stats-hearts">HP: ❤️❤️❤️</div>
-            <div class="hud-item" id="stats-room">NODE: #----</div>
-        </div>
         <div id="turn-display"></div>
         <div id="controls">
             <button class="btn btn-join" style="margin:0; flex:1;" onclick="setMode('SELECT')">اختر كوب</button>
@@ -95,11 +111,17 @@
         </div>
     </div>
 
+    <div id="winner-screen">
+        <h1 style="color:var(--neon-green)">🏆 البطل 🏆</h1>
+        <h2 id="winner-name"></h2>
+        <button class="btn btn-join" onclick="exitRoom()">الرئيسية</button>
+    </div>
+
     <div id="msg-modal" class="modal">
         <div class="modal-content">
             <h2 id="msg-title"></h2>
             <p id="msg-body"></p>
-            <button class="btn btn-join" onclick="closeMsg()">موافق</button>
+            <button class="btn btn-join" onclick="closeMsg()">استمرار</button>
         </div>
     </div>
 
@@ -126,6 +148,8 @@
             window.speechSynthesis.speak(utter);
         }
 
+        function toggleSidebar() { document.getElementById('side-menu').classList.toggle('open'); }
+
         function handleAuth() { auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()); }
 
         auth.onAuthStateChanged(user => {
@@ -138,7 +162,7 @@
         });
 
         async function createNewRoom() {
-            const id = Math.floor(1000 + Math.random() * 9000);
+            const id = Math.floor(1000 + Math.random() * 9000).toString();
             await db.ref('rooms/' + id).set({
                 config: { max: 2, status: 'LOBBY', turn: 0, lastEvent: "" },
                 cups: Array(30).fill({ state: 'closed' })
@@ -148,7 +172,7 @@
 
         function joinExistingRoom() {
             const id = document.getElementById('room-input').value;
-            if (id.length === 4) enterRoom(id);
+            if (id) enterRoom(id.toString());
         }
 
         async function enterRoom(id) {
@@ -158,46 +182,93 @@
             });
             document.getElementById('main-menu').style.display = 'none';
             document.getElementById('game-container').style.display = 'block';
-            document.getElementById('stats-room').innerText = `NODE: #` + id;
-            
-            // مراقبة الأحداث الصوتية للجميع
+
+            // مراقبة أحداث الانفجار العامة فقط
             db.ref(`rooms/${id}/config/lastEvent`).on('value', snap => {
                 if(snap.val()) speak(snap.val());
             });
 
             db.ref(`rooms/${id}`).on('value', snap => {
                 localGameState = snap.val();
-                if (localGameState) processFrame();
+                if (localGameState) {
+                    updateUI();
+                    checkWinner();
+                }
             });
         }
 
-        function exitRoom() { location.reload(); }
-
-        function processFrame() {
+        function updateUI() {
             const players = localGameState.players;
             const me = players[currentUser.uid];
             const pIds = Object.keys(players);
-            const turnIdx = localGameState.config.turn;
-
-            document.getElementById('stats-hearts').innerText = me.hp > 0 ? `HP: ` + "❤️".repeat(me.hp) : "وضع المشاهدة 👁️";
+            
+            // تحديث القائمة الجانبية
+            const list = document.getElementById('players-list');
+            list.innerHTML = "";
+            pIds.forEach(id => {
+                const p = players[id];
+                list.innerHTML += `
+                    <div class="player-row">
+                        <span>${p.name}</span>
+                        <span>${p.hp > 0 ? '❤️'.repeat(p.hp) : '<span style="color:red">DEAD</span>'}</span>
+                    </div>
+                `;
+            });
 
             const turnDisplay = document.getElementById('turn-display');
+            const controls = document.getElementById('controls');
+
             if (me.hp <= 0) {
-                turnDisplay.innerText = "أنت ميت - تشاهد الآن";
-                turnDisplay.className = "status-dead";
-                document.getElementById('controls').style.display = 'none';
-                playerMode = 'IDLE';
+                turnDisplay.innerText = "أنت تشاهد الآن";
+                turnDisplay.style.background = "#ff0055";
+                controls.style.display = 'none';
+                if (pIds[localGameState.config.turn] === currentUser.uid) passTurn();
             } else if (!me.ready) {
                 playerMode = 'SETUP';
                 turnDisplay.innerText = `ضع 3 فخاخ [${me.traps?.length || 0}/3]`;
                 turnDisplay.style.background = "var(--neon-purple)";
             } else {
-                const isTurn = pIds[turnIdx] === currentUser.uid;
-                const turnName = players[pIds[turnIdx]].name;
-                turnDisplay.innerText = isTurn ? "دورك الآن!" : `انتظار: ${turnName}`;
-                turnDisplay.style.background = isTurn ? "var(--neon-green)" : "#333";
-                document.getElementById('controls').style.display = isTurn ? 'flex' : 'none';
+                const isMyTurn = pIds[localGameState.config.turn] === currentUser.uid;
+                turnDisplay.innerText = isMyTurn ? "دورك" : `انتظار: ${players[pIds[localGameState.config.turn]].name}`;
+                turnDisplay.style.background = isMyTurn ? "var(--neon-green)" : "#333";
+                controls.style.display = isMyTurn ? 'flex' : 'none';
             }
+        }
+
+        async function triggerCardDraw() {
+            const cards = [
+                {t: "درع الطاقة", b: "حصلت على قلب إضافي", h: 1, v: "تم شحن الطاقة"},
+                {t: "فيروس مدمر", b: "فقدت قلباً بسبب عطل", h: -1, v: "تنبيه فيروس"},
+                {t: "سرقة حياة", b: "أخذت قلباً من خصمك (لو متاح)", h: 0, v: "سارق الأرواح"},
+                {t: "تبديل عشوائي", b: "تم فتح كوب عشوائي في الملعب", h: 0, v: "تعديل البيانات"}
+            ];
+            const card = cards[Math.floor(Math.random()*cards.length)];
+            
+            // نطق الكرت للاعب الحالي فقط
+            speak(card.t + ". " + card.b);
+
+            let up = {};
+            let currentHp = localGameState.players[currentUser.uid].hp;
+            up[`players/${currentUser.uid}/hp`] = Math.max(0, currentHp + card.h);
+            up[`config/turn`] = (localGameState.config.turn + 1) % Object.keys(localGameState.players).length;
+            
+            db.ref(`rooms/${activeRoom}`).update(up);
+            triggerMsg(card.t, card.b);
+        }
+
+        function checkWinner() {
+            const players = localGameState.players;
+            const alive = Object.values(players).filter(p => p.hp > 0);
+            if (alive.length === 1 && Object.keys(players).length >= localGameState.config.max) {
+                document.getElementById('winner-name').innerText = alive[0].name;
+                document.getElementById('winner-screen').style.display = 'flex';
+                speak("انتهت اللعبة. الفائز هو " + alive[0].name);
+            }
+        }
+
+        async function passTurn() {
+            const next = (localGameState.config.turn + 1) % Object.keys(localGameState.players).length;
+            db.ref(`rooms/${activeRoom}/config/turn`).set(next);
         }
 
         function startEngine() {
@@ -219,85 +290,63 @@
                 const data = localGameState.cups[i], me = localGameState.players[currentUser.uid];
                 ctx.save();
                 let color = '#1a1a25', icon = '';
-
                 if (playerMode === 'SETUP' && me.traps?.includes(i)) { color = '#bc13fe'; icon = '🕷️'; }
                 else if (data.state === 'open') {
                     let hasS = Object.values(localGameState.players).some(p => p.traps?.includes(i));
                     color = hasS ? '#ff0055' : '#00ff88'; icon = hasS ? '🕷️' : '✔';
                 }
-                ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.strokeRect(x,y,size,size);
+                ctx.strokeStyle = color; ctx.strokeRect(x,y,size,size);
                 ctx.fillStyle = color; ctx.font = `bold ${size/2}px sans-serif`; ctx.textAlign='center';
                 ctx.fillText(icon || '?', x+size/2, y+size/1.5); ctx.restore();
             }
         }
 
         canvas.addEventListener('touchstart', e => {
-            if(localGameState.players[currentUser.uid].hp <= 0) return; // منع اللعب للميت
+            if(localGameState.players[currentUser.uid].hp <= 0) return;
             const t = e.touches[0], r = canvas.getBoundingClientRect();
-            const tx = t.clientX-r.left, ty = t.clientY-r.top;
-            cupBoundaries.forEach(c => {
-                if (tx>c.x && tx<c.x+c.size && ty>c.y && ty<c.y+c.size) handleInteraction(c.index, c.x+c.size/2, c.y+c.size/2);
-            });
+            handleInteraction(t.clientX-r.left, t.clientY-r.top);
         });
 
-        async function handleInteraction(idx, cx, cy) {
-            if (playerMode === 'SETUP') {
-                let t = localGameState.players[currentUser.uid].traps || [];
-                if (t.length<3 && !t.includes(idx)) {
-                    t.push(idx);
-                    await db.ref(`rooms/${activeRoom}/players/${currentUser.uid}/traps`).set(t);
-                    if (t.length===3) await db.ref(`rooms/${activeRoom}/players/${currentUser.uid}/ready`).set(true);
+        function handleInteraction(tx, ty) {
+            cupBoundaries.forEach(async c => {
+                if (tx>c.x && tx<c.x+c.size && ty>c.y && ty<c.y+c.size) {
+                    if (playerMode === 'SETUP') {
+                        let t = localGameState.players[currentUser.uid].traps || [];
+                        if (t.length<3 && !t.includes(c.index)) {
+                            t.push(c.index);
+                            await db.ref(`rooms/${activeRoom}/players/${currentUser.uid}/traps`).set(t);
+                            if (t.length===3) await db.ref(`rooms/${activeRoom}/players/${currentUser.uid}/ready`).set(true);
+                        }
+                    } else if (playerMode === 'SELECT') {
+                        if (localGameState.cups[c.index].state === 'open') return;
+                        playerMode = 'IDLE';
+                        let hasS = false; Object.values(localGameState.players).forEach(p => { if (p.traps?.includes(c.index)) hasS = true; });
+                        let up = {}; up[`cups/${c.index}/state`] = 'open';
+                        if (hasS) { 
+                            up[`players/${currentUser.uid}/hp`] = localGameState.players[currentUser.uid].hp - 1;
+                            up[`config/lastEvent`] = "انفجار";
+                            createExp(c.x+c.size/2, c.y+c.size/2, '#ff0055');
+                        } else {
+                            vfxPulses.push({x:c.x+c.size/2,y:c.y+c.size/2,r:0,opacity:1,c:'#00ff88'});
+                        }
+                        up[`config/turn`] = (localGameState.config.turn + 1) % Object.keys(localGameState.players).length;
+                        db.ref(`rooms/${activeRoom}`).update(up);
+                    }
                 }
-            } else if (playerMode === 'SELECT') {
-                if (localGameState.cups[idx].state === 'open') return;
-                playerMode = 'IDLE';
-                let hasS = false; Object.values(localGameState.players).forEach(p => { if (p.traps?.includes(idx)) hasS = true; });
-                let up = {}; up[`cups/${idx}/state`] = 'open';
-                if (hasS) { 
-                    up[`players/${currentUser.uid}/hp`] = localGameState.players[currentUser.uid].hp - 1;
-                    up[`config/lastEvent`] = "انفجار! " + localGameState.players[currentUser.uid].name + " لمس عنكبوتاً";
-                    createExp(cx, cy, '#ff0055');
-                } else {
-                    up[`config/lastEvent`] = "آمن";
-                    createPulse(cx, cy, '#00ff88');
-                }
-                up[`config/turn`] = (localGameState.config.turn + 1) % Object.keys(localGameState.players).length;
-                db.ref(`rooms/${activeRoom}`).update(up);
-            }
+            });
         }
 
-        async function triggerCardDraw() {
-            const cards = [
-                {t: "إصلاح النظام", b: "تمت إضافة قلب إضافي لك", v: "إصلاح، طاقة زائدة", h: 1},
-                {t: "هجوم فيروسي", b: "خسرت قلباً بسبب عطل في النظام", v: "فيروس، تضرر النظام", h: -1},
-                {t: "تخطي الدور", b: "سوف تلعب مرة أخرى فوراً", v: "تسريع، دور إضافي", h: 0},
-                {t: "فخ مفاجئ", b: "عنكبوت عشوائي انفجر تحت قدمك", v: "فخ، خسرت قلباً", h: -1}
-            ];
-            const card = cards[Math.floor(Math.random()*cards.length)];
-            let up = {};
-            up[`players/${currentUser.uid}/hp`] = Math.max(0, localGameState.players[currentUser.uid].hp + card.h);
-            up[`config/lastEvent`] = card.v;
-            
-            // لو كرت تخطي الدور، مغيرش الـ turn
-            if(card.t !== "تخطي الدور") {
-                up[`config/turn`] = (localGameState.config.turn + 1) % Object.keys(localGameState.players).length;
-            }
-            
-            db.ref(`rooms/${activeRoom}`).update(up);
-            triggerMsg(card.t, card.b);
-        }
-
-        function createExp(x,y,c) { for(let i=0;i<20;i++) vfxParticles.push({x,y,vx:(Math.random()-0.5)*10,vy:(Math.random()-0.5)*10,life:1,c}); }
-        function createPulse(x,y,c) { vfxPulses.push({x,y,r:0,opacity:1,c}); }
+        function createExp(x,y,c) { for(let i=0;i<15;i++) vfxParticles.push({x,y,vx:(Math.random()-0.5)*8,vy:(Math.random()-0.5)*8,life:1,c}); }
         function updateVFX() {
-            vfxParticles.forEach((p,i)=>{ p.x+=p.vx;p.y+=p.vy;p.life-=0.02; if(p.life<=0)vfxParticles.splice(i,1); ctx.fillStyle=p.c;ctx.globalAlpha=p.life;ctx.beginPath();ctx.arc(p.x,p.y,2,0,7);ctx.fill(); });
-            vfxPulses.forEach((p,i)=>{ p.r+=4;p.opacity-=0.03; if(p.opacity<=0)vfxPulses.splice(i,1); ctx.strokeStyle=p.c;ctx.globalAlpha=p.opacity;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,7);ctx.stroke(); });
+            vfxParticles.forEach((p,i)=>{ p.x+=p.vx; p.y+=p.vy; p.life-=0.03; if(p.life<=0) vfxParticles.splice(i,1); ctx.fillStyle=p.c; ctx.globalAlpha=p.life; ctx.fillRect(p.x,p.y,2,2); });
+            vfxPulses.forEach((p,i)=>{ p.r+=3; p.opacity-=0.04; if(p.opacity<=0) vfxPulses.splice(i,1); ctx.strokeStyle=p.c; ctx.globalAlpha=p.opacity; ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,7); ctx.stroke(); });
             ctx.globalAlpha=1;
         }
 
         function setMode(m) { playerMode = m; }
         function triggerMsg(t,b) { document.getElementById('msg-title').innerText=t; document.getElementById('msg-body').innerText=b; document.getElementById('msg-modal').style.display='flex'; }
         function closeMsg() { document.getElementById('msg-modal').style.display='none'; }
+        function exitRoom() { location.reload(); }
     </script>
 </body>
 </html>
