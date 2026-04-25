@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Spider Tic-Tac-Toe (Game 1) + Voice</title>
+    
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <script src="https://download.agora.io/sdk/release/AgoraRTC_N-4.11.0.js"></script>
+    
+    <style>
+        :root {
+            --neon-green: #00ff88;
+            --neon-blue: #00d2ff;
+            --bg-dark: #020204;
+        }
+
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap');
+
+        body {
+            background-color: var(--bg-dark);
+            background-image: radial-gradient(circle at 50% 50%, #10101a 0%, #000 100%);
+            color: white; font-family: 'Orbitron', sans-serif;
+            margin: 0; padding: 0; height: 100vh; overflow: hidden;
+            display: flex; flex-direction: column; align-items: center;
+        }
+
+        #main-menu {
+            position: fixed; inset: 0; display: flex; flex-direction: column;
+            align-items: center; justify-content: center; z-index: 1000; background: var(--bg-dark);
+        }
+
+        .btn {
+            padding: 15px 30px; background: transparent; color: white;
+            border: 1px solid var(--neon-blue); width: 85%; max-width: 300px; 
+            margin-bottom: 12px; cursor: pointer; text-transform: uppercase;
+            transition: 0.3s; border-radius: 8px;
+        }
+        .btn-join { background: var(--neon-green); color: black; border: none; font-weight: bold; }
+
+        .phone-input {
+            width: 85%; max-width: 300px; padding: 15px; margin: 5px 0;
+            background: #111; border: 1px solid var(--neon-blue); color: white; text-align: center; border-radius: 8px;
+        }
+
+        .gameboard {
+            display: grid; grid-template-columns: repeat(3, 1fr);
+            width: 90vw; max-width: 350px; height: 350px;
+            background: rgba(255,255,255,0.02); border: 1px solid var(--neon-blue);
+            margin-top: 80px;
+        }
+
+        .square {
+            border: 1px solid rgba(0, 210, 255, 0.3);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 50px; font-weight: bold; cursor: pointer;
+        }
+
+        #turn-display { position: absolute; top: 20px; color: var(--neon-green); font-size: 18px; }
+        .x-mark { color: var(--neon-blue); text-shadow: 0 0 15px var(--neon-blue); }
+        .o-mark { color: #ff0055; text-shadow: 0 0 15px #ff0055; }
+
+        /* Voice Controls UI */
+        #voice-controls {
+            position: absolute; bottom: 20px; display: flex; gap: 10px; z-index: 50;
+        }
+        .voice-btn {
+            width: 50px; height: 50px; border-radius: 50%; border: 1px solid var(--neon-green);
+            background: rgba(0, 255, 136, 0.1); color: var(--neon-green); cursor: pointer;
+        }
+
+        #overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.8);
+            display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 2000;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="main-menu">
+        <h1 style="color:var(--neon-green)">SPIDER X-O</h1>
+        <div id="auth-box" style="display: flex; flex-direction: column; align-items: center; width: 100%;">
+            <input type="text" id="user-nickname" class="phone-input" placeholder="اسم المستخدم">
+            <input type="tel" id="phone-number" class="phone-input" value="+20">
+            <div id="recaptcha-container"></div>
+            <button class="btn btn-join" onclick="sendSMSCode()">دخول بالهاتف</button>
+            <div id="verify-section" style="display: none; width: 100%; flex-direction: column; align-items: center;">
+                <input type="number" id="sms-code" class="phone-input" placeholder="كود التحقق">
+                <button class="btn btn-join" onclick="verifySMSCode()">تأكيد</button>
+            </div>
+        </div>
+
+        <div id="lobby-ui" style="display: none; flex-direction: column; align-items: center; width: 100%;">
+            <button class="btn" style="color:var(--neon-green)" onclick="window.location.href='index1.html'">🚀 GAME 2 (5 ROUNDS)</button>
+            <input type="number" id="room-input" class="phone-input" placeholder="رقم الغرفة">
+            <button class="btn btn-join" onclick="joinRoom()">دخول الغرفة</button>
+        </div>
+    </div>
+
+    <div id="game-ui" style="display:none;">
+        <div id="turn-display">انتظار...</div>
+        <div class="gameboard">
+            <div class="square" onclick="makeMove(0)" id="s0"></div>
+            <div class="square" onclick="makeMove(1)" id="s1"></div>
+            <div class="square" onclick="makeMove(2)" id="s2"></div>
+            <div class="square" onclick="makeMove(3)" id="s3"></div>
+            <div class="square" onclick="makeMove(4)" id="s4"></div>
+            <div class="square" onclick="makeMove(5)" id="s5"></div>
+            <div class="square" onclick="makeMove(6)" id="s6"></div>
+            <div class="square" onclick="makeMove(7)" id="s7"></div>
+            <div class="square" onclick="makeMove(8)" id="s8"></div>
+        </div>
+
+        <div id="voice-controls">
+            <button class="voice-btn" id="mute-btn" onclick="toggleMic()">🎤</button>
+            <span id="voice-status" style="font-size: 10px; align-self: center;">صوت متصل</span>
+        </div>
+    </div>
+
+    <div id="overlay">
+        <h2 id="result-text"></h2>
+        <button class="btn btn-join" onclick="location.reload()">لعبة جديدة</button>
+    </div>
+
+    <script>
+        // --- تهيئة Firebase ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyDh0y_wU6wTUMJgmKHpLC4jPemXgoQqhKM",
+            authDomain: "spitar-game.firebaseapp.com",
+            databaseURL: "https://spitar-game-default-rtdb.firebaseio.com/",
+            projectId: "spitar-game",
+            storageBucket: "spitar-game.firebasestorage.app",
+            messagingSenderId: "790164742624",
+            appId: "1:790164742624:web:762eef5608ba298e6f0b85"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth(), db = firebase.database();
+        let currentUser, activeRoom, mySign, confirmationResult;
+
+        // --- تهيئة Agora Voice ---
+        const AGORA_APP_ID = "73cfc92b32f346df97c7b7f7bb82fafa";
+        const client = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
+        let localTracks = { audioTrack: null };
+        let isMuted = false;
+
+        async function startVoice(roomId) {
+            try {
+                await client.join(AGORA_APP_ID, roomId, null, null);
+                localTracks.audioTrack = await AgoraRTC.createMicrophoneAudioTrack();
+                await client.publish([localTracks.audioTrack]);
+                
+                client.on("user-published", async (user, mediaType) => {
+                    await client.subscribe(user, mediaType);
+                    if (mediaType === "audio") user.audioTrack.play();
+                });
+            } catch (e) { console.error("Voice Error:", e); }
+        }
+
+        function toggleMic() {
+            if (!localTracks.audioTrack) return;
+            isMuted = !isMuted;
+            localTracks.audioTrack.setEnabled(!isMuted);
+            document.getElementById('mute-btn').innerText = isMuted ? "🔇" : "🎤";
+            document.getElementById('mute-btn').style.borderColor = isMuted ? "red" : "var(--neon-green)";
+        }
+
+        // --- نظام التسجيل بالهاتف (نفس منطقك) ---
+        async function sendSMSCode() {
+            const phone = document.getElementById('phone-number').value;
+            window.recaptchaVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container', {'size': 'invisible'});
+            confirmationResult = await auth.signInWithPhoneNumber(phone, window.recaptchaVerifier);
+            document.getElementById('verify-section').style.display = 'flex';
+        }
+
+        async function verifySMSCode() {
+            const code = document.getElementById('sms-code').value;
+            const result = await confirmationResult.confirm(code);
+            await result.user.updateProfile({ displayName: document.getElementById('user-nickname').value });
+        }
+
+        auth.onAuthStateChanged(user => {
+            if (user) {
+                currentUser = user;
+                document.getElementById('auth-box').style.display = 'none';
+                document.getElementById('lobby-ui').style.display = 'flex';
+            }
+        });
+
+        // --- منطق اللعبة ---
+        async function joinRoom() {
+            const roomId = document.getElementById('room-input').value;
+            if (!roomId) return;
+            activeRoom = roomId;
+
+            const roomRef = db.ref('xo_rooms/' + roomId);
+            const snap = await roomRef.get();
+
+            if (!snap.exists()) {
+                mySign = 'X';
+                await roomRef.set({ board: Array(9).fill(""), turn: 'X', players: {p1: currentUser.uid}, status: 'waiting' });
+            } else {
+                mySign = 'O';
+                await roomRef.child('players/p2').set(currentUser.uid);
+                await roomRef.child('status').set('playing');
+            }
+
+            document.getElementById('main-menu').style.display = 'none';
+            document.getElementById('game-ui').style.display = 'block';
+            
+            // تشغيل الصوت فور دخول الغرفة
+            startVoice(roomId);
+            listenToRoom();
+        }
+
+        function listenToRoom() {
+            db.ref('xo_rooms/' + activeRoom).on('value', snap => {
+                const data = snap.val();
+                if (!data) return;
+                data.board.forEach((m, i) => {
+                    const el = document.getElementById('s' + i);
+                    el.innerHTML = m ? `<span class="${m === 'X' ? 'x-mark' : 'o-mark'}">${m}</span>` : "";
+                });
+                const turnDisplay = document.getElementById('turn-display');
+                turnDisplay.innerText = data.status === 'waiting' ? "انتظار الخصم..." : (data.turn === mySign ? "دورك الآن" : "دور الخصم");
+                checkWinnerLocally(data.board);
+            });
+        }
+
+        async function makeMove(i) {
+            const roomRef = db.ref('xo_rooms/' + activeRoom);
+            const snap = await roomRef.get();
+            const data = snap.val();
+            if (data.status === 'playing' && data.turn === mySign && data.board[i] === "") {
+                let nb = [...data.board]; nb[i] = mySign;
+                await roomRef.update({ board: nb, turn: mySign === 'X' ? 'O' : 'X' });
+            }
+        }
+
+        function checkWinnerLocally(board) {
+            const wins = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+            for (let c of wins) {
+                if (board[c[0]] && board[c[0]] === board[c[1]] && board[c[0]] === board[c[2]]) {
+                    showResult(board[c[0]] === mySign ? "🎉 كسبت!" : "😢 خسرت!");
+                    return;
+                }
+            }
+            if (!board.includes("")) showResult("🤝 تعادل!");
+        }
+
+        function showResult(t) {
+            document.getElementById('result-text').innerText = t;
+            document.getElementById('overlay').style.display = 'flex';
+        }
+    </script>
+</body>
+</html>
