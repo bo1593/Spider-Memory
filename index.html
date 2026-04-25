@@ -31,7 +31,6 @@
             margin: 0; padding: 0; height: 100vh; overflow: hidden;
         }
 
-        /* القائمة الجانبية (Sidebar) */
         #side-menu {
             position: fixed; top: 0; right: -280px; width: 280px; height: 100%;
             background: var(--glass); border-left: 2px solid var(--neon-blue);
@@ -51,7 +50,6 @@
             background: rgba(255,255,255,0.03); border-radius: 5px;
         }
 
-        /* القائمة الرئيسية */
         #main-menu {
             position: fixed; inset: 0; display: flex; flex-direction: column;
             align-items: center; justify-content: center; z-index: 1000; background: var(--bg-dark);
@@ -67,15 +65,14 @@
 
         .btn-create { border-color: var(--neon-purple); color: var(--neon-purple); }
         .btn-join { background: var(--neon-green); color: black; border: none; font-weight: bold; }
+        .btn-game2 { border-color: var(--neon-green); color: var(--neon-green); }
 
-        /* ستايل إدخال الهاتف والاسم */
         .phone-input {
-            width: 85%; max-width: 300px; padding: 15px; margin: 10px 0;
+            width: 85%; max-width: 300px; padding: 15px; margin: 5px 0;
             background: #111; border: 1px solid var(--neon-blue);
-            color: white; text-align: center; font-size: 18px; border-radius: 5px;
+            color: white; text-align: center; font-size: 16px; border-radius: 5px;
         }
 
-        /* اختيار اللاعبين */
         .selector-container { display: flex; gap: 10px; margin-bottom: 20px; width: 85%; max-width: 300px; }
         .p-choice {
             flex: 1; padding: 12px; border: 1px solid #333; text-align: center;
@@ -94,6 +91,13 @@
 
         #controls { position: absolute; bottom: 30px; width: 100%; display: none; justify-content: center; gap: 10px; padding: 0 20px; }
 
+        #quick-alert {
+            position: fixed; top: 40%; left: 50%; transform: translate(-50%, -50%);
+            background: var(--neon-green); color: black; padding: 15px 30px;
+            font-weight: bold; border-radius: 5px; display: none; z-index: 5000;
+            box-shadow: 0 0 20px var(--neon-green);
+        }
+
         .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.9); display: none; align-items: center; justify-content: center; z-index: 3000; }
         .modal-content { background: var(--glass); border: 1px solid var(--neon-green); padding: 30px; width: 85%; text-align: center; border-radius: 10px; }
 
@@ -102,73 +106,67 @@
 </head>
 <body>
 
+    <div id="quick-alert">اختر كوباً!</div>
     <div class="menu-toggle" id="menu-btn" style="display:none;" onclick="toggleSidebar()">☰</div>
 
     <div id="side-menu">
         <h2 style="color:var(--neon-blue); font-size: 18px; border-bottom: 1px solid;">بيانات الغرفة</h2>
-        <p id="display-room-id" style="color:var(--neon-green); font-weight: bold; letter-spacing: 2px;">رقم الغرفة: #----</p>
-        <div style="height: 20px;"></div>
-        <h3 style="font-size: 14px; opacity: 0.8;">اللاعبين والقلوب:</h3>
+        <p id="display-room-id" style="color:var(--neon-green); font-weight: bold; letter-spacing: 2px;">#----</p>
         <div id="players-list"></div>
-        <button class="btn btn-create" style="margin-top: 40px; font-size: 11px; width: 100%;" onclick="exitRoom()">خروج من اللعبة</button>
+        <button class="btn btn-create" style="margin-top: 40px; font-size: 11px; width: 100%;" onclick="exitRoom()">خروج</button>
     </div>
 
     <div id="main-menu">
-        <h1 style="color:var(--neon-green); text-shadow: 0 0 10px var(--neon-green); margin-bottom: 30px;">SPIDER MEMORY</h1>
+        <h1 style="color:var(--neon-green); text-shadow: 0 0 10px var(--neon-green); margin-bottom: 20px;">SPIDER MEMORY</h1>
         
-        <div id="auth-selection" style="display: flex; flex-direction: column; align-items: center; width: 100%;">
-            <button class="btn" id="login-btn" onclick="handleAuth()">دخول باستخدام جوجل</button>
-            <button class="btn btn-create" onclick="showPhoneUI()">دخول برقم الهاتف</button>
-        </div>
-
-        <div id="phone-ui" style="display: none; flex-direction: column; align-items: center; width: 100%;">
-            <input type="text" id="user-nickname" class="phone-input" placeholder="اكتب اسمك هنا">
-            <input type="tel" id="phone-number" class="phone-input" placeholder="+20 100 000 0000">
+        <div id="auth-box" style="display: flex; flex-direction: column; align-items: center; width: 100%;">
+            <button class="btn" id="google-btn" onclick="handleAuth()">جوجل</button>
+            <div style="margin: 10px 0; opacity: 0.5;">- أو -</div>
+            <input type="text" id="user-nickname" class="phone-input" placeholder="اسمك المستعار">
+            <input type="tel" id="phone-number" class="phone-input" value="+20" oninput="validatePhone(this)">
             <div id="recaptcha-container"></div>
-            <button class="btn btn-join" onclick="sendSMSCode()">إرسال كود التحقق</button>
+            <button class="btn btn-join" onclick="sendSMSCode()">دخول بالهاتف</button>
             
-            <div id="verify-section" style="display: none; width: 100%; flex-direction: column; align-items: center;">
-                <input type="number" id="sms-code" class="phone-input" placeholder="ادخل الكود (6 أرقام)">
-                <button class="btn btn-create" onclick="verifySMSCode()">تأكيد الدخول</button>
+            <div id="verify-section" style="display: none; width: 100%; flex-direction: column; align-items: center; margin-top: 10px;">
+                <input type="number" id="sms-code" class="phone-input" placeholder="كود التحقق">
+                <button class="btn btn-create" onclick="verifySMSCode()">تأكيد</button>
             </div>
-            <button class="btn" style="border-color:var(--danger); color:var(--danger); margin-top:10px;" onclick="hidePhoneUI()">إلغاء</button>
         </div>
         
         <div id="lobby-ui" style="display: none; flex-direction: column; align-items: center; width: 100%;">
-            <p style="font-size: 12px; margin-bottom: 10px; opacity: 0.6;">حدد عدد اللاعبين للغرفة الجديدة:</p>
+            <button class="btn btn-game2" onclick="window.location.href='index1.html'">🚀 GAME 2 (3D)</button>
+            
             <div class="selector-container">
                 <div class="p-choice active" onclick="setCapacity(2)">2</div>
                 <div class="p-choice" onclick="setCapacity(3)">3</div>
                 <div class="p-choice" onclick="setCapacity(4)">4</div>
             </div>
-            
-            <button class="btn btn-create" onclick="createNewRoom()">إنشاء غرفة جديدة</button>
-            <div style="margin: 15px 0; opacity: 0.3;">⎯⎯⎯⎯ أو ⎯⎯⎯⎯</div>
-            <input type="number" id="room-input" style="width:85%; max-width: 300px; padding:15px; margin-bottom:12px; text-align:center; background:#111; color:#fff; border:1px solid #333; font-size: 18px;" placeholder="ادخل كود الغرفة">
-            <button class="btn btn-join" onclick="joinExistingRoom()">دخول غرفة موجودة</button>
+            <button class="btn btn-create" onclick="createNewRoom()">إنشاء غرفة</button>
+            <input type="number" id="room-input" class="phone-input" placeholder="كود الغرفة">
+            <button class="btn btn-join" onclick="joinExistingRoom()">دخول غرفة</button>
         </div>
     </div>
 
     <div id="game-container">
         <canvas id="game-canvas"></canvas>
-        <div id="turn-display">جاري الربط...</div>
+        <div id="turn-display">جاري التحميل...</div>
         <div id="controls">
-            <button class="btn btn-join" style="margin:0; flex:1;" onclick="setMode('SELECT')">كشف كوب</button>
+            <button class="btn btn-join" style="margin:0; flex:1;" onclick="setMode('SELECT')">كشف</button>
             <button class="btn btn-create" style="margin:0; flex:1;" onclick="triggerCardDraw()">سحب كرت</button>
         </div>
     </div>
 
     <div id="winner-screen">
-        <h1 style="color:var(--neon-green); font-size: 40px;">🏆 البطل 🏆</h1>
-        <h2 id="winner-name" style="margin: 20px 0;">اسم اللاعب</h2>
-        <button class="btn btn-join" onclick="exitRoom()">العودة للقائمة</button>
+        <h1 style="color:var(--neon-green)">🏆 الفائز 🏆</h1>
+        <h2 id="winner-name"></h2>
+        <button class="btn btn-join" onclick="exitRoom()">خروج</button>
     </div>
 
     <div id="msg-modal" class="modal">
         <div class="modal-content">
             <h2 id="msg-title" style="color:var(--neon-green)"></h2>
-            <p id="msg-body" style="margin: 20px 0;"></p>
-            <button class="btn btn-join" style="width:100%" onclick="closeMsg()">فهمت</button>
+            <p id="msg-body"></p>
+            <button class="btn btn-join" style="width:100%" onclick="closeMsg()">تمام</button>
         </div>
     </div>
 
@@ -185,10 +183,11 @@
 
         firebase.initializeApp(firebaseConfig);
         const auth = firebase.auth(), db = firebase.database();
-        let currentUser, activeRoom, localGameState, playerMode = 'IDLE', roomCapacity = 2;
-        let confirmationResult; 
+        let currentUser, activeRoom, localGameState, playerMode = 'IDLE', roomCapacity = 2, confirmationResult;
         const canvas = document.getElementById('game-canvas'), ctx = canvas.getContext('2d');
         let cupBoundaries = [], vfxParticles = [], vfxPulses = [];
+
+        function validatePhone(input) { if (!input.value.startsWith('+20')) input.value = '+20'; }
 
         function speak(text) {
             const utter = new SpeechSynthesisUtterance(text);
@@ -196,56 +195,28 @@
             window.speechSynthesis.speak(utter);
         }
 
-        function setCapacity(n) {
-            roomCapacity = n;
-            document.querySelectorAll('.p-choice').forEach(el => el.classList.remove('active'));
-            event.target.classList.add('active');
-        }
-
         function toggleSidebar() { document.getElementById('side-menu').classList.toggle('open'); }
-
         function handleAuth() { auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()); }
-
-        function showPhoneUI() {
-            document.getElementById('auth-selection').style.display = 'none';
-            document.getElementById('phone-ui').style.display = 'flex';
-            window.recaptchaVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container', { 'size': 'invisible' });
-        }
-
-        function hidePhoneUI() {
-            document.getElementById('auth-selection').style.display = 'flex';
-            document.getElementById('phone-ui').style.display = 'none';
-        }
 
         async function sendSMSCode() {
             const phone = document.getElementById('phone-number').value;
-            const nickname = document.getElementById('user-nickname').value;
-            
-            if(!nickname) return triggerMsg("تنبيه", "برجاء كتابة اسمك أولاً");
-            if(!phone.startsWith('+')) return triggerMsg("خطأ", "يجب كتابة الرقم بكود الدولة (مثلاً +20)");
-            
-            try {
-                confirmationResult = await auth.signInWithPhoneNumber(phone, window.recaptchaVerifier);
-                document.getElementById('verify-section').style.display = 'flex';
-                triggerMsg("تم الإرسال", "سيصلك كود الآن في رسالة SMS");
-            } catch (e) { triggerMsg("خطأ", e.message); }
+            const nick = document.getElementById('user-nickname').value;
+            if(!nick || phone === '+20') return alert("اكتب الاسم والرقم");
+            window.recaptchaVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container', {'size': 'invisible'});
+            confirmationResult = await auth.signInWithPhoneNumber(phone, window.recaptchaVerifier);
+            document.getElementById('verify-section').style.display = 'flex';
         }
 
         async function verifySMSCode() {
             const code = document.getElementById('sms-code').value;
-            const nickname = document.getElementById('user-nickname').value;
-            try {
-                const result = await confirmationResult.confirm(code);
-                // تحديث اسم المستخدم في Firebase Profile
-                await result.user.updateProfile({ displayName: nickname });
-            } catch (e) { triggerMsg("خطأ", "الكود غير صحيح"); }
+            const result = await confirmationResult.confirm(code);
+            await result.user.updateProfile({ displayName: document.getElementById('user-nickname').value });
         }
 
         auth.onAuthStateChanged(user => {
             if (user) {
                 currentUser = user;
-                document.getElementById('auth-selection').style.display = 'none';
-                document.getElementById('phone-ui').style.display = 'none';
+                document.getElementById('auth-box').style.display = 'none';
                 document.getElementById('lobby-ui').style.display = 'flex';
                 startEngine();
             }
@@ -254,7 +225,7 @@
         async function createNewRoom() {
             const id = Math.floor(1000 + Math.random() * 9000).toString();
             await db.ref('rooms/' + id).set({
-                config: { max: roomCapacity, status: 'LOBBY', turn: 0, lastEvent: "" },
+                config: { max: roomCapacity, status: 'LOBBY', turn: 0, lastEvent: "بدأت اللعبة" },
                 cups: Array(30).fill({ state: 'closed' })
             });
             enterRoom(id);
@@ -267,73 +238,50 @@
 
         async function enterRoom(id) {
             activeRoom = id;
-            const displayName = currentUser.displayName || currentUser.phoneNumber || "لاعب";
-            await db.ref(`rooms/${id}/players/${currentUser.uid}`).set({
-                name: displayName.split(' ')[0], hp: 3, traps: [], ready: false
-            });
+            await db.ref(`rooms/${id}/players/${currentUser.uid}`).set({ name: currentUser.displayName || "لاعب", hp: 3, traps: [], ready: false });
             document.getElementById('main-menu').style.display = 'none';
             document.getElementById('game-container').style.display = 'block';
             document.getElementById('menu-btn').style.display = 'block';
-            document.getElementById('display-room-id').innerText = "رقم الغرفة: #" + id;
+            document.getElementById('display-room-id').innerText = "#" + id;
 
             db.ref(`rooms/${id}/config/lastEvent`).on('value', snap => { if(snap.val()) speak(snap.val()); });
-            db.ref(`rooms/${id}`).on('value', snap => { localGameState = snap.val(); if (localGameState) { updateUI(); checkWinner(); } });
+            db.ref(`rooms/${id}`).on('value', snap => { localGameState = snap.val(); if(localGameState){ updateUI(); checkWinner(); } });
         }
 
         function updateUI() {
-            const players = localGameState.players;
-            const me = players[currentUser.uid];
-            const pIds = Object.keys(players);
-            const list = document.getElementById('players-list');
-            list.innerHTML = "";
+            const players = localGameState.players, me = players[currentUser.uid], pIds = Object.keys(players);
+            const list = document.getElementById('players-list'); list.innerHTML = "";
             pIds.forEach(id => {
                 const p = players[id];
-                list.innerHTML += `<div class="player-row"><span style="color:${id === currentUser.uid ? 'var(--neon-green)' : 'white'}">${p.name}</span><span>${p.hp > 0 ? '❤️'.repeat(p.hp) : '<span style="color:var(--danger)">☠️</span>'}</span></div>`;
+                list.innerHTML += `<div class="player-row"><span>${p.name}</span><span>${p.hp > 0 ? '❤️'.repeat(p.hp) : '☠️'}</span></div>`;
             });
 
-            const turnDisplay = document.getElementById('turn-display'), controls = document.getElementById('controls');
-            if (me.hp <= 0) {
-                turnDisplay.innerText = "وضع المشاهدة"; turnDisplay.style.background = "var(--danger)";
-                controls.style.display = 'none'; if (pIds[localGameState.config.turn] === currentUser.uid) passTurn();
-            } else if (!me.ready) {
-                playerMode = 'SETUP'; turnDisplay.innerText = `ضع 3 فخاخ [${me.traps?.length || 0}/3]`;
-                turnDisplay.style.background = "var(--neon-purple)"; controls.style.display = 'none';
-            } else if (localGameState.config.status === 'LOBBY') {
-                turnDisplay.innerText = "بانتظار البقية..."; turnDisplay.style.background = "#333";
+            const td = document.getElementById('turn-display'), ctrl = document.getElementById('controls');
+            if (me.hp <= 0) { td.innerText = "مشاهدة"; ctrl.style.display='none'; }
+            else if (!me.ready) { playerMode = 'SETUP'; td.innerText = `ضع الفخاخ [${me.traps?.length || 0}/3]`; }
+            else if (localGameState.config.status === 'LOBBY') {
+                td.innerText = "انتظار اللاعبين...";
                 if (pIds.length >= localGameState.config.max && Object.values(players).every(p => p.ready)) db.ref(`rooms/${activeRoom}/config/status`).set('PLAYING');
             } else {
                 const isMyTurn = pIds[localGameState.config.turn] === currentUser.uid;
-                turnDisplay.innerText = isMyTurn ? "دورك الآن!" : `انتظار: ${players[pIds[localGameState.config.turn]].name}`;
-                turnDisplay.style.background = isMyTurn ? "var(--neon-green)" : "#111";
-                turnDisplay.style.color = isMyTurn ? "#000" : "#fff";
-                controls.style.display = isMyTurn ? 'flex' : 'none';
+                td.innerText = isMyTurn ? "دورك" : `انتظار ${players[pIds[localGameState.config.turn]].name}`;
+                ctrl.style.display = isMyTurn ? 'flex' : 'none';
             }
         }
 
         async function triggerCardDraw() {
-            const cards = [{t: "درع السيبر", b: "+1 قلب", h: 1}, {t: "فيروس هجين", b: "-1 قلب", h: -1}, {t: "إعادة تعيين", b: "دور إضافي", h: 0}, {t: "لغم مفاجئ", b: "-1 قلب", h: -1}, {t: "طاقة زائدة", b: "+1 قلب", h: 1}];
+            const alertBox = document.getElementById('quick-alert');
+            alertBox.style.display = 'block';
+            setTimeout(() => alertBox.style.display = 'none', 2000);
+
+            const cards = [{t:"درع", h:1}, {t:"فيروس", h:-1}, {t:"هدية", h:1}, {t:"انفجار", h:-1}];
             const card = cards[Math.floor(Math.random()*cards.length)];
-            speak(card.t);
-            let up = {}; let currentHp = localGameState.players[currentUser.uid].hp;
-            up[`players/${currentUser.uid}/hp`] = Math.max(0, currentHp + card.h);
-            if(card.t !== "إعادة تعيين") up[`config/turn`] = (localGameState.config.turn + 1) % Object.keys(localGameState.players).length;
+            let up = {}; 
+            up[`players/${currentUser.uid}/hp`] = Math.max(0, localGameState.players[currentUser.uid].hp + card.h);
+            up[`config/lastEvent`] = `${localGameState.players[currentUser.uid].name} سحب كرت ${card.t}`;
+            up[`config/turn`] = (localGameState.config.turn + 1) % Object.keys(localGameState.players).length;
             db.ref(`rooms/${activeRoom}`).update(up);
-            triggerMsg(card.t, card.b);
-        }
-
-        function checkWinner() {
-            if(localGameState.config.status !== 'PLAYING') return;
-            const alive = Object.values(localGameState.players).filter(p => p.hp > 0);
-            if (alive.length === 1 && Object.keys(localGameState.players).length >= localGameState.config.max) {
-                document.getElementById('winner-name').innerText = alive[0].name;
-                document.getElementById('winner-screen').style.display = 'flex';
-                db.ref(`rooms/${activeRoom}/config/status`).set('FINISHED');
-            }
-        }
-
-        async function passTurn() {
-            const pIds = Object.keys(localGameState.players);
-            db.ref(`rooms/${activeRoom}/config/turn`).set((localGameState.config.turn + 1) % pIds.length);
+            triggerMsg(card.t, card.h > 0 ? "+1 قلب" : "-1 قلب");
         }
 
         function startEngine() {
@@ -383,13 +331,16 @@
                     } else if (playerMode === 'SELECT') {
                         if (localGameState.cups[c.index].state === 'open') return;
                         playerMode = 'IDLE';
-                        let hasS = false; Object.values(localGameState.players).forEach(p => { if (p.traps?.includes(c.index)) hasS = true; });
+                        let hasS = Object.values(localGameState.players).some(p => p.traps?.includes(c.index));
                         let up = {}; up[`cups/${c.index}/state`] = 'open';
                         if (hasS) { 
                             up[`players/${currentUser.uid}/hp`] = Math.max(0, localGameState.players[currentUser.uid].hp - 1);
-                            up[`config/lastEvent`] = "انفجار لـ " + localGameState.players[currentUser.uid].name;
+                            up[`config/lastEvent`] = `انفجار لـ ${localGameState.players[currentUser.uid].name}`;
                             createExp(c.x+c.size/2, c.y+c.size/2, '#ff0055');
-                        } else { vfxPulses.push({x:c.x+c.size/2,y:c.y+c.size/2,r:0,opacity:1,c:'#00ff88'}); }
+                        } else { 
+                            up[`config/lastEvent`] = `${localGameState.players[currentUser.uid].name} كشف كوباً آمناً`;
+                            vfxPulses.push({x:c.x+c.size/2,y:c.y+c.size/2,r:0,opacity:1,c:'#00ff88'}); 
+                        }
                         up[`config/turn`] = (localGameState.config.turn + 1) % Object.keys(localGameState.players).length;
                         db.ref(`rooms/${activeRoom}`).update(up);
                     }
@@ -408,7 +359,19 @@
         function triggerMsg(t,b) { document.getElementById('msg-title').innerText=t; document.getElementById('msg-body').innerText=b; document.getElementById('msg-modal').style.display='flex'; }
         function closeMsg() { document.getElementById('msg-modal').style.display='none'; }
         function exitRoom() { location.reload(); }
+        function checkWinner() {
+            const alive = Object.values(localGameState.players).filter(p => p.hp > 0);
+            if (localGameState.config.status === 'PLAYING' && alive.length === 1 && Object.keys(localGameState.players).length >= localGameState.config.max) {
+                document.getElementById('winner-name').innerText = alive[0].name;
+                document.getElementById('winner-screen').style.display = 'flex';
+                db.ref(`rooms/${activeRoom}/config/status`).set('FINISHED');
+            }
+        }
+        function setCapacity(n) {
+            roomCapacity = n;
+            document.querySelectorAll('.p-choice').forEach(el => el.classList.remove('active'));
+            event.target.classList.add('active');
+        }
     </script>
 </body>
 </html>
-
