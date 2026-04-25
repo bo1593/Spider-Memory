@@ -8,6 +8,7 @@
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <script src="https://download.agora.io/sdk/release/AgoraRTC_N-4.11.0.js"></script>
     
     <style>
         :root {
@@ -91,6 +92,13 @@
 
         #controls { position: absolute; bottom: 30px; width: 100%; display: none; justify-content: center; gap: 10px; padding: 0 20px; }
 
+        /* ستايل زرار المايك */
+        .voice-btn {
+            width: 50px; height: 50px; border-radius: 50%; border: 1px solid var(--neon-green);
+            background: rgba(0, 255, 136, 0.1); color: var(--neon-green); font-size: 20px;
+            cursor: pointer; display: flex; align-items: center; justify-content: center;
+        }
+
         #quick-alert {
             position: fixed; top: 40%; left: 50%; transform: translate(-50%, -50%);
             background: var(--neon-green); color: black; padding: 15px 30px;
@@ -151,6 +159,7 @@
         <canvas id="game-canvas"></canvas>
         <div id="turn-display">جاري التحميل...</div>
         <div id="controls">
+            <button class="voice-btn" id="mute-btn" onclick="toggleMic()">🎤</button>
             <button class="btn btn-join" style="margin:0; flex:1;" onclick="setMode('SELECT')">كشف</button>
             <button class="btn btn-create" style="margin:0; flex:1;" onclick="triggerCardDraw()">سحب كرت</button>
         </div>
@@ -186,6 +195,32 @@
         let currentUser, activeRoom, localGameState, playerMode = 'IDLE', roomCapacity = 2, confirmationResult;
         const canvas = document.getElementById('game-canvas'), ctx = canvas.getContext('2d');
         let cupBoundaries = [], vfxParticles = [], vfxPulses = [];
+
+        // --- كود الصوت ---
+        const AGORA_APP_ID = "73cfc92b32f346df97c7b7f7bb82fafa";
+        const client = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
+        let localTracks = { audioTrack: null };
+        let isMuted = false;
+
+        async function startVoice(roomId) {
+            try {
+                await client.join(AGORA_APP_ID, roomId, null, null);
+                localTracks.audioTrack = await AgoraRTC.createMicrophoneAudioTrack();
+                await client.publish([localTracks.audioTrack]);
+                client.on("user-published", async (user, mediaType) => {
+                    await client.subscribe(user, mediaType);
+                    if (mediaType === "audio") user.audioTrack.play();
+                });
+            } catch (e) { console.error(e); }
+        }
+
+        function toggleMic() {
+            if (!localTracks.audioTrack) return;
+            isMuted = !isMuted;
+            localTracks.audioTrack.setEnabled(!isMuted);
+            document.getElementById('mute-btn').innerText = isMuted ? "🔇" : "🎤";
+            document.getElementById('mute-btn').style.borderColor = isMuted ? "var(--danger)" : "var(--neon-green)";
+        }
 
         function validatePhone(input) { if (!input.value.startsWith('+20')) input.value = '+20'; }
 
@@ -244,6 +279,7 @@
             document.getElementById('menu-btn').style.display = 'block';
             document.getElementById('display-room-id').innerText = "#" + id;
 
+            startVoice(id); // تشغيل المايك عند الدخول
             db.ref(`rooms/${id}/config/lastEvent`).on('value', snap => { if(snap.val()) speak(snap.val()); });
             db.ref(`rooms/${id}`).on('value', snap => { localGameState = snap.val(); if(localGameState){ updateUI(); checkWinner(); } });
         }
@@ -375,3 +411,4 @@
     </script>
 </body>
 </html>
+
